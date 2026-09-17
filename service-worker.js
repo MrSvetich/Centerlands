@@ -1,5 +1,5 @@
-const CACHE='centerlands-v012';
-const ASSETS=['./','./index.html','./manifest.json'];
+const CACHE='centerlands-v013';
+const ASSETS=['./','./index.html','./manifest.json','./home_island_v013.jpg'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
   self.skipWaiting();

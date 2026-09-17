@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.12</title>
+<title>Centerlands — Prototype v0.13</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -170,13 +170,112 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 .tradeOffer{background:#101916;border:1px solid var(--line);border-radius:13px;padding:10px;margin-top:8px}
 .tradeOffer .who{font-size:10px;color:var(--muted);margin-bottom:5px}
 
+
+.visualHomeWrap{
+ position:relative;
+ height:540px;
+ overflow:auto;
+ border:1px solid #31505a;
+ border-radius:22px;
+ margin-bottom:11px;
+ background:#0c2025;
+ overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;
+ touch-action:pan-x pan-y;
+}
+.visualHomeMap{
+ position:relative;
+ width:820px;
+ height:690px;
+ background-image:url("home_island_v013.jpg");
+ background-size:cover;
+ background-position:center;
+ border-radius:20px;
+ overflow:hidden;
+}
+.visualHomeMap:after{
+ content:"";
+ position:absolute;inset:0;
+ box-shadow:inset 0 0 90px rgba(6,14,13,.28);
+ pointer-events:none;
+}
+.visualHotspot{
+ position:absolute;
+ transform:translate(-50%,-50%);
+ z-index:8;
+}
+.visualHotspot button{
+ min-width:52px;
+ min-height:52px;
+ border-radius:50%;
+ background:rgba(15,28,24,.86);
+ border:2px solid rgba(230,242,236,.78);
+ box-shadow:0 6px 22px rgba(0,0,0,.32);
+ backdrop-filter:blur(5px);
+ font-size:21px;
+}
+.visualHotspot span{
+ display:block;
+ margin-top:5px;
+ padding:3px 6px;
+ background:rgba(14,25,22,.86);
+ border:1px solid rgba(255,255,255,.16);
+ border-radius:8px;
+ color:#fff;
+ font-size:9px;
+ font-weight:800;
+ white-space:nowrap;
+ text-align:center;
+}
+.visualWorker{
+ position:absolute;
+ width:24px;
+ height:24px;
+ border-radius:50%;
+ background:#f2d4a4;
+ border:3px solid #19382f;
+ transform:translate(-50%,-50%);
+ z-index:14;
+ box-shadow:0 4px 14px rgba(0,0,0,.42);
+ transition:left .24s linear,top .24s linear;
+}
+.visualWorker:after{
+ content:"";
+ position:absolute;
+ width:7px;height:7px;
+ border-radius:50%;
+ background:#22362f;
+ left:6px;top:5px;
+}
+.visualWorkerLabel{
+ position:absolute;
+ left:50%;top:-21px;
+ transform:translateX(-50%);
+ background:rgba(9,18,16,.92);
+ color:#fff;
+ font-size:8px;
+ font-weight:800;
+ padding:2px 5px;
+ border-radius:7px;
+ white-space:nowrap;
+}
+.visualHint{
+ font-size:10px;
+ color:#aec0b9;
+ background:#111b18;
+ border:1px solid var(--line);
+ border-radius:10px;
+ padding:7px 9px;
+ margin:-2px 0 8px;
+}
+
 </style>
 </head>
 <body>
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.12</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.13</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -206,6 +305,7 @@ const $=s=>document.querySelector(s), now=()=>Date.now(), fmt=n=>Math.max(0,Math
 let activeTab="home";
 let mapScroll={left:null,top:null};
 let mapInteracting=false;
+let visualHomeScroll={left:null,top:null};
 
 const HOME_JOBS={
  wood:{title:"Лесопилка",icon:"🌲",out:3,work:8,back:3,reward:{wood:12},rewardText:"+12 дерева"},
@@ -740,15 +840,15 @@ function processTeam(t){
 
 
 const HOME_POS={
- wood:{x:24,y:23},
- farm:{x:77,y:24},
- stone:{x:22,y:76}
+ wood:{x:68,y:27},
+ farm:{x:25,y:62},
+ stone:{x:24,y:26}
 };
 function homeTeamMarker(t){
  if(!t.special || !t.special.startsWith("home:")) return "";
  const key=t.special.split(":")[1],j=HOME_JOBS[key],p=HOME_POS[key];
  if(!j||!p) return "";
- const bx=50,by=50,ts=now();
+ const bx=50,by=49,ts=now();
  let x=p.x,y=p.y,label="";
  if(t.phase==="out"){
    const rem=Math.max(0,(t.phaseEnd-ts)/1000);
@@ -758,7 +858,7 @@ function homeTeamMarker(t){
    label=`${t.name} → ${mmss(rem)}`;
  }else if(t.phase==="work"){
    x=p.x;y=p.y;
-   label=`${t.name} · работа ${phaseETA(t)}`;
+   label=`${t.name} · ${phaseETA(t)}`;
  }else if(t.phase==="back"){
    const rem=Math.max(0,(t.phaseEnd-ts)/1000);
    const progress=Math.max(0,Math.min(1,1-rem/j.back));
@@ -766,7 +866,7 @@ function homeTeamMarker(t){
    y=p.y+(by-p.y)*progress;
    label=`${t.name} ← ${mmss(rem)}`;
  }else return "";
- return `<div class="moveTag homeMoveTag" style="left:${x}%;top:${y}%">${label}</div>`;
+ return `<div class="visualWorker" style="left:${x}%;top:${y}%"><div class="visualWorkerLabel">${label}</div></div>`;
 }
 function homeTeamMarkers(){
  return S.teams.map(homeTeamMarker).join("");
@@ -774,30 +874,32 @@ function homeTeamMarkers(){
 
 function home6(){
  return `<div class="hero objective">
-   <div class="tiny">VI КОЛЬЦО · БЕЗОПАСНАЯ ЗОНА</div>
+   <div class="tiny">VI КОЛЬЦО · ВИЗУАЛЬНЫЙ ПРОТОТИП</div>
    <h1>Домашний остров</h1>
-   <p>Здесь вы учитесь управлять командами. Все объекты безопасны, а цель — подготовить первую шлюпку и выйти к V кольцу.</p>
+   <p>Первая версия мира Centerlands. Нажимайте на здания прямо на острове и наблюдайте, как команды идут к ним и возвращаются.</p>
    <div class="ringline"><div class="current">VI</div><div>V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
  </div>
  ${teamChips()}
- <div class="homeMap">
-   <div class="place base" style="left:50%;top:50%"><button>🏠</button><span>Ваша база</span></div>
-   <div class="place free" style="left:24%;top:23%"><button onclick="openHomeObject('wood')">🌲</button><span>Лесопилка</span></div>
-   <div class="place free" style="left:77%;top:24%"><button onclick="openHomeObject('farm')">🌾</button><span>Ферма</span></div>
-   <div class="place free" style="left:22%;top:76%"><button onclick="openHomeObject('stone')">🪨</button><span>Карьер</span></div>
-   <div class="place free" style="left:76%;top:73%"><button onclick="openHomeWorkshop()">🧵</button><span>Ткацкая мастерская</span></div>
-   <div class="place free" style="left:50%;top:88%"><button onclick="openHomeDock()">⚓</button><span>Причал</span></div>
+ <div class="visualHint">Карту можно двигать пальцем или трекпадом. Графика пока концептуальная — механику уже тестируем поверх неё.</div>
+ <div class="visualHomeWrap" id="visualHomeWrap">
+  <div class="visualHomeMap">
+   <div class="visualHotspot" style="left:50%;top:49%"><button>🏠</button><span>База</span></div>
+   <div class="visualHotspot" style="left:68%;top:27%"><button onclick="openHomeObject('wood')">🌲</button><span>Лесопилка</span></div>
+   <div class="visualHotspot" style="left:25%;top:62%"><button onclick="openHomeObject('farm')">🌾</button><span>Ферма</span></div>
+   <div class="visualHotspot" style="left:24%;top:26%"><button onclick="openHomeObject('stone')">🪨</button><span>Карьер</span></div>
+   <div class="visualHotspot" style="left:76%;top:61%"><button onclick="openHomeWorkshop()">🧵</button><span>Ткацкая</span></div>
+   <div class="visualHotspot" style="left:83%;top:82%"><button onclick="openHomeDock()">⚓</button><span>Причал</span></div>
    ${homeTeamMarkers()}
+  </div>
  </div>
  <div class="card objective">
    <h3>${S.boat?"✅ Шлюпка готова":"Следующая цель: построить шлюпку"}</h3>
-   <p>${S.boat?(S.reached5?"Вы уже открыли V кольцо.":"Можно отправляться к V кольцу."):"Собирайте ресурсы на карте и используйте ткацкую мастерскую."}</p>
+   <p>${S.boat?(S.reached5?"Вы уже открыли V кольцо.":"Можно отправляться к V кольцу."):"Собирайте ресурсы непосредственно на острове."}</p>
    <div class="actions">
     ${S.boat?(S.reached5?`<button onclick="travelRing(5)">Вернуться на V</button>`:`<button onclick="sailFirst()">Отправиться на V</button>`):""}
    </div>
  </div>`;
 }
-
 function objectClass(o){
  if(o.contest)return"contest";
  if(o.owner==="player")return"owned";
@@ -1126,10 +1228,28 @@ function periodicUI(){
  }
 }
 
+
+function enableVisualHomePan(){
+ const wrap=document.getElementById("visualHomeWrap");
+ if(!wrap||wrap.dataset.ready==="1")return;
+ wrap.dataset.ready="1";
+ if(visualHomeScroll.left===null){
+   wrap.scrollLeft=Math.max(0,(820-wrap.clientWidth)/2);
+   wrap.scrollTop=Math.max(0,(690-wrap.clientHeight)/2);
+ }else{
+   wrap.scrollLeft=visualHomeScroll.left;
+   wrap.scrollTop=visualHomeScroll.top;
+ }
+ wrap.addEventListener("scroll",()=>{
+   visualHomeScroll.left=wrap.scrollLeft;
+   visualHomeScroll.top=wrap.scrollTop;
+ },{passive:true});
+}
+
 function render(){
  $("#resources").innerHTML=resourceHTML();$("#where").textContent=S.ring===6?"VI кольцо · домашний остров":S.ring===5?"V кольцо · сектор 12":"IV кольцо · порт профессий";$("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
  ["home","teams","store","world"].forEach(k=>{$("#"+k+"Screen").classList.toggle("hidden",activeTab!==k);document.querySelector(`[data-tab="${k}"]`).classList.toggle("active",activeTab===k)});
- renderHome();renderTeams();renderStore();renderWorld();enableMapPan();
+ renderHome();renderTeams();renderStore();renderWorld();enableMapPan();enableVisualHomePan();
 }
 function resetGame(){localStorage.removeItem("centerlands_v05");S=fresh();activeTab="home";closeModal();render();toast("Прогресс сброшен")}
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{activeTab=b.dataset.tab;render()}));
