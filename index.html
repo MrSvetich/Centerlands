@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.11</title>
+<title>Centerlands — Prototype v0.12</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -135,13 +135,48 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 .contestNotice .actions{margin-top:8px}
 .contestNotice .actions button{padding:8px 10px;font-size:10.5px}
 
+
+.ivMap{
+ position:relative;
+ height:440px;
+ border:1px solid #31505a;
+ border-radius:21px;
+ overflow:hidden;
+ margin-bottom:11px;
+ background:
+   radial-gradient(circle at 50% 48%,#2d5447 0 15%,transparent 15.8%),
+   radial-gradient(circle at 20% 22%,#27473d 0 9%,transparent 9.8%),
+   radial-gradient(circle at 80% 23%,#203d37 0 9%,transparent 9.8%),
+   radial-gradient(circle at 20% 77%,#203f35 0 9%,transparent 9.8%),
+   radial-gradient(circle at 81% 77%,#29493d 0 9%,transparent 9.8%),
+   linear-gradient(160deg,#183a40,#10292e);
+}
+.ivMap:after{
+ content:"";
+ position:absolute;inset:0;
+ background-image:radial-gradient(rgba(255,255,255,.10) 1px,transparent 1px);
+ background-size:22px 22px;
+ opacity:.11;
+ pointer-events:none;
+}
+.profGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.profCard{background:#15211e;border:1px solid var(--line);border-radius:15px;padding:11px}
+.profCard h3{font-size:13px;margin:4px 0}
+.profCard p{font-size:10.5px;color:var(--muted);line-height:1.35;margin:0 0 9px}
+.componentGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}
+.component{background:#101916;border:1px solid var(--line);border-radius:12px;padding:9px;font-size:10.5px}
+.component b{display:block;font-size:16px;margin-top:3px}
+.component.have{border-color:#477e68;background:#162b24}
+.tradeOffer{background:#101916;border:1px solid var(--line);border-radius:13px;padding:10px;margin-top:8px}
+.tradeOffer .who{font-size:10px;color:var(--muted);margin-bottom:5px}
+
 </style>
 </head>
 <body>
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.11</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.12</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -178,6 +213,45 @@ const HOME_JOBS={
  stone:{title:"Карьер",icon:"🪨",out:5,work:10,back:5,reward:{stone:8},rewardText:"+8 камня"}
 };
 
+const PROFESSIONS={
+ shipwright:{
+   name:"Корабел",icon:"⚓",building:"Судовая мастерская",
+   component:"shipModule",componentName:"Корабельный модуль",componentIcon:"🧭",
+   desc:"Создаёт судовые узлы и улучшения кораблей.",
+   cost:{wood:18,iron:6}
+ },
+ industrial:{
+   name:"Промышленник",icon:"⚙️",building:"Механический цех",
+   component:"mechanisms",componentName:"Механизмы",componentIcon:"⚙️",
+   desc:"Работает с металлом, инструментами и механизмами.",
+   cost:{iron:12,stone:8}
+ },
+ supplier:{
+   name:"Снабженец",icon:"📦",building:"Склад снабжения",
+   component:"supplies",componentName:"Экспедиционные припасы",componentIcon:"📦",
+   desc:"Готовит еду, ткань, воду и экипировку для экспедиций.",
+   cost:{food:16,cloth:6}
+ },
+ explorer:{
+   name:"Исследователь",icon:"🗺️",building:"Навигационная станция",
+   component:"navMap",componentName:"Навигационная карта",componentIcon:"🗺️",
+   desc:"Исследует маршруты, погоду и безопасные проходы.",
+   cost:{food:8,wood:8}
+ }
+};
+const COMPONENTS={
+ shipModule:{name:"Корабельный модуль",icon:"🧭"},
+ mechanisms:{name:"Механизмы",icon:"⚙️"},
+ supplies:{name:"Экспедиционные припасы",icon:"📦"},
+ navMap:{name:"Навигационная карта",icon:"🗺️"}
+};
+const TRADE_NAMES={
+ shipModule:"Mila · корабел",
+ mechanisms:"Alex · промышленник",
+ supplies:"Noah · снабженец",
+ navMap:"Iris · исследователь"
+};
+
 const OBJECT_DEFS=[
  {id:"wood_a",type:"wood",name:"Лесопилка",icon:"🌲",x:16,y:18,travel:5,work:18,back:5,reward:{wood:22},rewardText:"+22 дерева",rich:false},
  {id:"wood_b",type:"wood",name:"Богатая лесопилка",icon:"🌲",x:72,y:12,travel:8,work:20,back:8,reward:{wood:42},rewardText:"+42 дерева",rich:true},
@@ -197,7 +271,8 @@ function baseObjectState(def){
 function fresh(){
  const objects={};OBJECT_DEFS.forEach(d=>objects[d.id]=baseObjectState(d));
  return {
-   ring:6,reached5:false,outpost:false,boat:false,boatBuilding:false,ship2:false,ship2Building:false,
+   ring:6,reached5:false,reached4:false,outpost:false,boat:false,boatBuilding:false,ship2:false,ship2Building:false,
+   profession:null,components:{shipModule:0,mechanisms:0,supplies:0,navMap:0},ship3:false,ship3Building:false,
    resources:{wood:15,food:12,stone:8,fiber:0,cloth:0,iron:0},
    teams:[
     {id:1,name:"Команда A",phase:"idle",target:null,phaseEnd:0,missionEnd:0,reward:null,rewardText:"",special:null,objectId:null},
@@ -215,6 +290,12 @@ function normalize(){
    if(!S.objects[d.id])S.objects[d.id]=baseObjectState(d);
    else S.objects[d.id]={...baseObjectState(d),...S.objects[d.id]};
  });
+ if(!S.components)S.components={shipModule:0,mechanisms:0,supplies:0,navMap:0};
+ Object.keys(COMPONENTS).forEach(k=>{if(S.components[k]==null)S.components[k]=0});
+ if(S.reached4==null)S.reached4=false;
+ if(S.profession==null)S.profession=null;
+ if(S.ship3==null)S.ship3=false;
+ if(S.ship3Building==null)S.ship3Building=false;
 }
 function save(){localStorage.setItem("centerlands_v05",JSON.stringify(S))}
 function load(){try{const x=JSON.parse(localStorage.getItem("centerlands_v05")||"null");if(x){S={...fresh(),...x};normalize();}}catch(e){}}
@@ -335,8 +416,24 @@ function sailFirst(){
  if(!S.boat)return;
  openModal(`<h2>⛵ Первый переход</h2><p>Спокойная вода между VI и V кольцами.</p><div class="timeline"><div><span>Путь</span><b>5 сек</b></div></div><div class="actions"><button onclick="confirmTravel(5,true)">Отправиться</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`);
 }
-function travelRing(target){if(target===5&&!S.reached5){toast("V кольцо ещё закрыто");return}openModal(`<h2>⛵ Переход на ${target===6?"VI":"V"} кольцо</h2><p>Ваши уже отправленные команды продолжают свои задания.</p><div class="timeline"><div><span>Путь</span><b>5 сек</b></div></div><div class="actions"><button onclick="confirmTravel(${target},false)">Отправиться</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`)}
-function confirmTravel(target,first){closeModal();setTimeout(()=>{S.ring=target;if(target===5)S.reached5=true;save();log(`${target===5?"V":"VI"} кольцо достигнуто.`)},5000);toast("Корабль вышел в путь")}
+function ringRoman(target){return target===6?"VI":target===5?"V":target===4?"IV":target===3?"III":String(target)}
+function travelRing(target){
+ if(target===5&&!S.reached5){toast("V кольцо ещё закрыто");return}
+ if(target===4&&!S.ship2){toast("Сначала нужен корабль II класса");return}
+ if(target===4&&!S.reached4&&S.ring!==5){toast("IV кольцо ещё не открыто");return}
+ openModal(`<h2>⛵ Переход на ${ringRoman(target)} кольцо</h2><p>Ваши уже отправленные команды продолжают свои задания.</p><div class="timeline"><div><span>Путь</span><b>5 сек</b></div></div><div class="actions"><button onclick="confirmTravel(${target},false)">Отправиться</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`)
+}
+function confirmTravel(target,first){
+ closeModal();
+ setTimeout(()=>{
+   S.ring=target;
+   if(target===5)S.reached5=true;
+   if(target===4)S.reached4=true;
+   save();
+   log(`${ringRoman(target)} кольцо достигнуто.`);
+ },5000);
+ toast("Корабль вышел в путь")
+}
 function foundOutpost(){
  const t=freeTeam();if(!t){toast("Нет свободной команды");return}
  const ts=now();t.phase="build";t.target="Основание форпоста";t.phaseEnd=ts+6e3;t.missionEnd=t.phaseEnd;t.special="outpost";log(`${t.name} разворачивает форпост.`);
@@ -628,6 +725,16 @@ function processTeam(t){
  if(t.special==="boat"&&t.phase==="build"&&ts>=t.phaseEnd){S.boat=true;S.boatBuilding=false;resetTeam(t);log("Шлюпка готова.");return}
  if(t.special==="outpost"&&t.phase==="build"&&ts>=t.phaseEnd){S.outpost=true;resetTeam(t);log("Форпост основан.");return}
  if(t.special==="ship2"&&t.phase==="build"&&ts>=t.phaseEnd){S.ship2=true;S.ship2Building=false;resetTeam(t);log("Корабль II класса готов.");return}
+ if(t.special?.startsWith("ivcraft:")&&t.phase==="build"&&ts>=t.phaseEnd){
+   const key=t.special.split(":")[1];
+   const qty=Math.random()<.15?2:1;
+   S.components[key]=(S.components[key]||0)+qty;
+   const name=COMPONENTS[key]?.name||"компонент";
+   resetTeam(t);
+   log(`${t.name} завершила производство: +${qty} ${name}${qty===2?" · исключительное качество":""}.`);
+   return
+ }
+ if(t.special==="ship3"&&t.phase==="build"&&ts>=t.phaseEnd){S.ship3=true;S.ship3Building=false;resetTeam(t);log("Корабль III класса готов.");return}
  if(t.special==="object"){tickPlayerObjectTeam(t);return}
 }
 
@@ -730,19 +837,190 @@ function map5(){
  </div></div>
  <div class="card objective"><h3>${S.ship2?"✅ Корабль II класса готов":"⛵ Цель V кольца: корабль II класса"}</h3><p>${S.ship2?"Вы готовы к следующему кольцу.":"Для него нужны ресурсы этого кольца. Занятая верфь сокращает время строительства вдвое."}</p><div class="meta">🌲 ${fmt(S.resources.wood)}/${c.wood} · 🌾 ${fmt(S.resources.food)}/${c.food} · ⛓ ${fmt(S.resources.iron)}/${c.iron} · 🧵 ${fmt(S.resources.cloth)}/${c.cloth}</div>
     <div class="meta">${!costOK(c)?"Сначала соберите все ресурсы.":freeTeams().length===0?"Нужна свободная команда для строительства.":"Все условия выполнены."}</div>
-    <div class="actions">${S.ship2?`<button disabled>IV — следующий этап</button>`:`<button onclick="buildShip2()" ${(freeTeams().length===0||!costOK(ship2Cost))?"disabled":""}>Построить</button>${S.resources.cloth<c.cloth?`<button class="secondary" onclick="travelRing(6)">Вернуться за тканью</button>`:""}`}</div></div>`;
+    <div class="actions">${S.ship2?`<button onclick="travelRing(4)">${S.reached4?"Вернуться на IV":"Перейти на IV"}</button>`:`<button onclick="buildShip2()" ${(freeTeams().length===0||!costOK(ship2Cost))?"disabled":""}>Построить</button>${S.resources.cloth<c.cloth?`<button class="secondary" onclick="travelRing(6)">Вернуться за тканью</button>`:""}`}</div></div>`;
 }
-function renderHome(){$("#homeScreen").innerHTML=S.ring===6?home6():map5()}
+
+function professionCard(key){
+ const p=PROFESSIONS[key];
+ return `<div class="profCard">
+   <div class="bigNum">${p.icon}</div>
+   <h3>${p.name}</h3>
+   <p>${p.desc}</p>
+   <button onclick="confirmProfession('${key}')">Выбрать</button>
+ </div>`;
+}
+function confirmProfession(key){
+ const p=PROFESSIONS[key];
+ openModal(`<h2>${p.icon} ${p.name}</h2>
+ <p>${p.desc}</p>
+ <div class="timeline">
+  <div><span>Ваше здание</span><b>${p.building}</b></div>
+  <div><span>Главный продукт</span><b>${p.componentIcon} ${p.componentName}</b></div>
+ </div>
+ <p>В прототипе выбор фиксируется на сезон. Смена профессии через книгу переобучения появится позже.</p>
+ <div class="actions"><button onclick="chooseProfession('${key}')">Подтвердить</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+}
+function chooseProfession(key){
+ if(S.profession)return;
+ S.profession=key;
+ closeModal();
+ log(`Выбрана профессия: ${PROFESSIONS[key].name}.`);
+}
+function componentHTML(){
+ return Object.entries(COMPONENTS).map(([k,c])=>`<div class="component ${S.components[k]>0?"have":""}">
+   ${c.icon} ${c.name}<b>${S.components[k]}</b>
+ </div>`).join("");
+}
+function ownProfession(){
+ return S.profession?PROFESSIONS[S.profession]:null;
+}
+function openProfessionWorkshop(){
+ const p=ownProfession();
+ if(!p){toast("Сначала выберите профессию");return}
+ const c=p.cost;
+ const can=freeTeams().length>0&&costOK(c);
+ const costText=Object.entries(c).map(([k,v])=>{
+   const icons={wood:"🌲",food:"🌾",stone:"🪨",cloth:"🧵",iron:"⛓"};return `${icons[k]||k} ${v}`;
+ }).join(" + ");
+ openModal(`<h2>${p.icon} ${p.building}</h2>
+ <p>Вы производите свой профессиональный компонент. Остальные компоненты выгоднее получать через обмен.</p>
+ <div class="timeline">
+  <div><span>Затраты</span><b>${costText}</b></div>
+  <div><span>Время</span><b>10 сек</b></div>
+  <div><span>Обычный результат</span><b>+1 ${p.componentIcon}</b></div>
+  <div><span>Исключительный результат</span><b>15% → +2</b></div>
+ </div>
+ <div class="actions"><button onclick="startProfessionCraft()" ${can?"":"disabled"}>Начать производство</button><button class="ghost" onclick="closeModal()">Закрыть</button></div>`);
+}
+function startProfessionCraft(){
+ const p=ownProfession(),t=freeTeam();
+ if(!p||!t||!costOK(p.cost))return;
+ spend(p.cost);
+ closeModal();
+ const ts=now();
+ t.phase="build";
+ t.target=p.componentName;
+ t.phaseEnd=ts+10000;
+ t.missionEnd=t.phaseEnd;
+ t.special=`ivcraft:${p.component}`;
+ log(`${t.name} начала производство: ${p.componentName}.`);
+}
+function openMarket(){
+ if(!S.profession){toast("Сначала выберите профессию");return}
+ const p=ownProfession(),own=p.component;
+ const missing=Object.keys(COMPONENTS).filter(k=>k!==own&&S.components[k]===0);
+ let offers=missing.map(k=>{
+   const c=COMPONENTS[k];
+   return `<div class="tradeOffer">
+    <div class="who">${TRADE_NAMES[k]}</div>
+    <b>Отдаёт: ${c.icon} 1 ${c.name}</b>
+    <div class="tiny" style="margin-top:4px">Хочет: ${p.componentIcon} 1 ${p.componentName}</div>
+    <div class="actions"><button onclick="acceptTrade('${k}')" ${S.components[own]<1?"disabled":""}>Обменять</button></div>
+   </div>`;
+ }).join("");
+ if(!offers)offers=`<div class="card"><b>Все нужные компоненты уже собраны.</b></div>`;
+ openModal(`<h2>⚖️ Рынок обмена</h2>
+ <p>Это тест рынка с предложениями других игроков. В полной версии игроки сами будут создавать такие лоты.</p>
+ <div class="timeline"><div><span>Ваш товар для обмена</span><b>${p.componentIcon} ${S.components[own]} шт.</b></div></div>
+ ${offers}
+ <div class="actions"><button class="ghost" onclick="closeModal()">Закрыть</button></div>`);
+}
+function acceptTrade(target){
+ const p=ownProfession(),own=p.component;
+ if(S.components[own]<1){toast("Не хватает своего компонента");return}
+ S.components[own]--;
+ S.components[target]++;
+ closeModal();
+ log(`Обмен завершён: получено ${COMPONENTS[target].name}.`);
+}
+function expeditionReady(){
+ return Object.keys(COMPONENTS).every(k=>S.components[k]>=1);
+}
+function openExpeditionDock(){
+ const ready=expeditionReady();
+ openModal(`<h2>⛵ Экспедиционный док</h2>
+ <p>Для прохода к III кольцу нужен комплект из четырёх профессиональных компонентов.</p>
+ <div class="componentGrid">${componentHTML()}</div>
+ <div class="actions" style="margin-top:12px">
+  ${S.ship3?`<button disabled>Корабль III класса готов</button>`:
+    `<button onclick="buildShip3()" ${(!ready||freeTeams().length===0||S.ship3Building)?"disabled":""}>Собрать корабль III класса</button>`}
+  <button class="ghost" onclick="closeModal()">Закрыть</button>
+ </div>`);
+}
+function buildShip3(){
+ if(S.ship3||S.ship3Building||!expeditionReady())return;
+ const t=freeTeam();if(!t)return;
+ Object.keys(COMPONENTS).forEach(k=>S.components[k]--);
+ S.ship3Building=true;
+ closeModal();
+ const ts=now();
+ t.phase="build";t.target="Корабль III класса";t.phaseEnd=ts+12000;t.missionEnd=t.phaseEnd;t.special="ship3";
+ log(`${t.name} собирает корабль III класса.`);
+}
+function ring4(){
+ if(!S.profession){
+   return `<div class="hero objective">
+    <div class="row space"><div><div class="tiny">IV КОЛЬЦО · ПОРТ ПРОФЕССИЙ</div><h1>Выберите специализацию</h1></div><button class="ghost" onclick="travelRing(5)">← V</button></div>
+    <p>Начиная с этого кольца невозможно одинаково эффективно делать всё. Выберите роль на сезон.</p>
+    <div class="ringline"><div class="done">VI</div><div class="done">V</div><div class="current">IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
+   </div>
+   <div class="profGrid">${Object.keys(PROFESSIONS).map(professionCard).join("")}</div>
+   <div class="card" style="margin-top:10px"><b>Цель IV кольца</b><p>Произвести свой профессиональный компонент, обменяться с другими игроками и собрать комплект для корабля III класса.</p></div>`;
+ }
+ const p=ownProfession();
+ return `<div class="hero">
+   <div class="row space"><div><div class="tiny">IV КОЛЬЦО · ПОРТ ПРОФЕССИЙ</div><h1>${p.icon} ${p.name}</h1></div><button class="ghost" onclick="travelRing(5)">← V</button></div>
+   <p>${p.desc} Теперь ваша задача — использовать специализацию и рынок, чтобы собрать четыре части экспедиционного комплекта.</p>
+   <div class="ringline"><div class="done">VI</div><div class="done">V</div><div class="current">IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
+ </div>
+ ${teamChips()}
+ <div class="ivMap">
+   <div class="place base" style="left:50%;top:50%"><button>🏰</button><span>Ваш безопасный порт</span></div>
+   <div class="place free" style="left:20%;top:23%"><button onclick="openProfessionWorkshop()">${p.icon}</button><span>${p.building}</span></div>
+   <div class="place free" style="left:80%;top:24%"><button onclick="openMarket()">⚖️</button><span>Рынок обмена</span></div>
+   <div class="place free" style="left:20%;top:77%"><button onclick="openExpeditionDock()">⛵</button><span>Экспедиционный док</span></div>
+   <div class="place other" style="left:81%;top:76%"><button onclick="openMarket()">👥</button><span>Торговый квартал</span></div>
+ </div>
+ <div class="card objective">
+   <h3>${S.ship3?"✅ Корабль III класса готов":S.ship3Building?"🔧 Корабль III класса строится":"Экспедиционный комплект"}</h3>
+   <p>${S.ship3?"Следующий этап — III кольцо и альянсы.":`Свой компонент: ${p.componentIcon} ${p.componentName}. Сделайте несколько экземпляров: один оставьте себе, остальные используйте для обмена.`}</p>
+   <div class="componentGrid">${componentHTML()}</div>
+   <div class="actions" style="margin-top:10px">
+    <button onclick="openProfessionWorkshop()" ${freeTeams().length===0?"disabled":""}>Производство</button>
+    <button class="secondary" onclick="openMarket()">Рынок</button>
+    <button class="secondary" onclick="openExpeditionDock()">Док</button>
+   </div>
+ </div>`;
+}
+
+function renderHome(){$("#homeScreen").innerHTML=S.ring===6?home6():S.ring===5?map5():ring4()}
 function renderTeams(){
  $("#teamsScreen").innerHTML=`<div class="hero"><h1>Команды · ${freeTeams().length}/${S.teams.length} свободно</h1><p>Видно, куда идёт каждая команда и сколько осталось до полного возвращения.</p></div><div class="card">${S.teams.map(t=>`<div class="teamRow"><div><b>${t.name}</b><div class="teamDetail">${phaseName(t)}${t.phase!=="idle"?`<br>Этап: ${phaseETA(t)} · домой: ${teamETA(t)}`:""}</div></div><span class="${t.phase==="idle"?"ok":"yellow"}">${t.phase==="idle"?"ГОТОВА":"ЗАНЯТА"}</span></div>`).join("")}</div><div class="section-title">Журнал</div><div class="card log">${S.logs.map(x=>`<div>${x}</div>`).join("")}</div>`;
 }
 function renderStore(){
- const r=S.resources;$("#storeScreen").innerHTML=`<div class="hero"><h1>Склад</h1><p>Пока склад общий для VI и V. Логистика между кольцами будет отдельным тестом.</p></div><div class="card">${[["🌲","Дерево",r.wood],["🌾","Еда",r.food],["🪨","Камень",r.stone],["🌿","Волокно",r.fiber],["🧵","Ткань",r.cloth],["⛓","Железо",r.iron]].map(x=>`<div class="teamRow"><b>${x[0]} ${x[1]}</b><span>${fmt(x[2])}</span></div>`).join("")}</div><div class="card"><div class="actions"><button class="danger" onclick="resetGame()">Сбросить прогресс</button></div></div>`;
+ const r=S.resources;$("#storeScreen").innerHTML=`<div class="hero"><h1>Склад</h1><p>Пока склад общий для открытых колец. Логистика между кольцами будет отдельным тестом.</p></div>
+ <div class="card">${[["🌲","Дерево",r.wood],["🌾","Еда",r.food],["🪨","Камень",r.stone],["🌿","Волокно",r.fiber],["🧵","Ткань",r.cloth],["⛓","Железо",r.iron]].map(x=>`<div class="teamRow"><b>${x[0]} ${x[1]}</b><span>${fmt(x[2])}</span></div>`).join("")}</div>
+ ${S.reached4?`<div class="section-title">Экспедиционные компоненты</div><div class="card"><div class="componentGrid">${componentHTML()}</div></div>`:""}
+ <div class="card"><div class="actions"><button class="danger" onclick="resetGame()">Сбросить прогресс</button></div></div>`;
 }
 function renderWorld(){
- $("#worldScreen").innerHTML=`<div class="hero objective"><div class="tiny">КАРТА СЕЗОНА</div><h1>Путь к Центру</h1><div class="ringline"><div class="${S.ring===6?"current":"done"}">VI</div><div class="${S.ring===5?"current":""}">V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div></div>${S.reached5?`<div class="card"><h3>Открытые маршруты</h3><div class="actions"><button class="secondary" onclick="travelRing(6)">VI</button><button class="secondary" onclick="travelRing(5)">V</button></div></div>`:""}<div class="card"><h3>IV кольцо</h3><p>Следующий слой — специализации.</p></div>`;
+ $("#worldScreen").innerHTML=`<div class="hero objective"><div class="tiny">КАРТА СЕЗОНА</div><h1>Путь к Центру</h1>
+ <div class="ringline">
+  <div class="${S.ring===6?"current":"done"}">VI</div>
+  <div class="${S.ring===5?"current":S.reached5?"done":""}">V</div>
+  <div class="${S.ring===4?"current":S.reached4?"done":""}">IV</div>
+  <div>III</div><div>II</div><div>I</div><div>★</div>
+ </div></div>
+ ${S.reached5?`<div class="card"><h3>Открытые маршруты</h3><div class="actions">
+   <button class="secondary" onclick="travelRing(6)">VI</button>
+   <button class="secondary" onclick="travelRing(5)">V</button>
+   ${S.reached4?`<button class="secondary" onclick="travelRing(4)">IV</button>`:""}
+ </div></div>`:""}
+ <div class="card"><h3>IV кольцо · специализации</h3>
+ <p>${S.reached4?(S.profession?`Ваша профессия: ${PROFESSIONS[S.profession].icon} ${PROFESSIONS[S.profession].name}.`:"Вы уже достигли IV кольца. Осталось выбрать профессию."):"Нужен корабль II класса, чтобы открыть IV кольцо."}</p>
+ </div>
+ ${S.ship3?`<div class="card"><h3>III кольцо готово к разработке</h3><p>Корабль III класса уже собран. Следующий слой прототипа — альянсы и совместные объекты.</p></div>`:""}`;
 }
-
 function enableMapPan(){
  const wrap=document.querySelector(".mapWrap");
  if(!wrap || wrap.dataset.panReady==="1") return;
@@ -813,7 +1091,7 @@ function enableMapPan(){
 
 function refreshTopUI(){
  $("#resources").innerHTML=resourceHTML();
- $("#where").textContent=S.ring===6?"VI кольцо · домашний остров":"V кольцо · сектор 12";
+ $("#where").textContent=S.ring===6?"VI кольцо · домашний остров":S.ring===5?"V кольцо · сектор 12":"IV кольцо · порт профессий";
  $("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
  const summary=document.getElementById("homeTeamSummary");
  if(summary) summary.innerHTML=teamChipContent();
@@ -849,7 +1127,7 @@ function periodicUI(){
 }
 
 function render(){
- $("#resources").innerHTML=resourceHTML();$("#where").textContent=S.ring===6?"VI кольцо · домашний остров":"V кольцо · сектор 12";$("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
+ $("#resources").innerHTML=resourceHTML();$("#where").textContent=S.ring===6?"VI кольцо · домашний остров":S.ring===5?"V кольцо · сектор 12":"IV кольцо · порт профессий";$("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
  ["home","teams","store","world"].forEach(k=>{$("#"+k+"Screen").classList.toggle("hidden",activeTab!==k);document.querySelector(`[data-tab="${k}"]`).classList.toggle("active",activeTab===k)});
  renderHome();renderTeams();renderStore();renderWorld();enableMapPan();
 }
