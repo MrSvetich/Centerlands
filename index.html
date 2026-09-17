@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#0d1513"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Centerlands"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Centerlands — Prototype v0.6</title>
+<style>
+:root{
+ --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
+ --line:#31413c;--good:#75c89f;--warn:#e5bb6f;--danger:#df7e7e;--accent:#9fd3bd;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#09100e;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+body{display:flex;justify-content:center;min-height:100vh}
+#app{width:min(100%,470px);min-height:100vh;background:linear-gradient(#101a17,#0d1513);padding-bottom:90px}
+header{position:sticky;top:0;z-index:20;background:rgba(13,21,19,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:11px 13px 10px}
+.row{display:flex;align-items:center;gap:8px}.space{justify-content:space-between}.title{font-weight:850}.tiny{font-size:11px;color:var(--muted)}
+.pill{font-size:11px;border:1px solid var(--line);background:var(--panel);padding:6px 9px;border-radius:999px}
+.resources{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}.res{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:6px 8px;font-size:10.5px}.res b{display:block;font-size:14px;margin-top:1px}
+main{padding:13px}.hero{background:linear-gradient(160deg,#1c332b,#182521);border:1px solid #365147;border-radius:19px;padding:15px;margin-bottom:11px}
+.hero h1{font-size:21px;margin:0 0 6px}.hero p{font-size:12.5px;line-height:1.45;color:#c9d8d2;margin:0}
+.section-title{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin:17px 2px 8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:8px}.card h3{margin:0;font-size:15px}.card p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
+.meta{margin-top:8px;font-size:11px;color:#b8cbc4;line-height:1.45}.objective{border-left:3px solid var(--warn)}
+button{border:0;border-radius:11px;padding:9px 11px;font-weight:800;background:var(--accent);color:#102019;cursor:pointer}
+button.secondary{background:#263831;color:#e8f3ee;border:1px solid #3d524a}button.ghost{background:transparent;color:#bed1c9;border:1px solid var(--line)}
+button.warn{background:var(--warn);color:#282014}button.danger{background:var(--danger);color:#2a1111}button:disabled{opacity:.38;cursor:not-allowed}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.teamSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 12px}.teamChip{background:#121c19;border:1px solid var(--line);border-radius:12px;padding:8px;min-height:62px}.teamChip b{font-size:11px;display:block}.teamChip span{display:block;font-size:10px;color:var(--muted);margin-top:4px;line-height:1.25}.teamChip.idle{border-color:#426052}.teamChip.busy{border-color:#6d613e}
+.teamRow{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:10px 0;font-size:12px}.teamRow:first-of-type{border-top:0}.teamDetail{color:var(--muted);font-size:10.5px;margin-top:3px;line-height:1.35}
+.ok{color:var(--good)}.bad{color:var(--danger)}.yellow{color:var(--warn)}
+.log{max-height:190px;overflow:auto;font-size:11px;color:#b7cac3}.log div{padding:6px 0;border-bottom:1px solid rgba(49,66,60,.65)}
+nav{position:fixed;bottom:0;width:min(100%,470px);background:rgba(11,18,16,.97);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:7px 9px calc(7px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);gap:4px;z-index:30}
+nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:10.5px;border:0}nav button.active{color:var(--text);background:var(--panel)}
+.modalBack{display:none;position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:50;align-items:flex-end;justify-content:center}.modalBack.show{display:flex}
+.modal{width:min(100%,470px);max-height:86vh;overflow:auto;background:#17221f;border-radius:22px 22px 0 0;border:1px solid var(--line);padding:16px 16px calc(18px + env(safe-area-inset-bottom))}
+.modal h2{margin:0 0 7px;font-size:18px}.modal p{color:var(--muted);font-size:12px;line-height:1.45}.timeline{background:#101916;border:1px solid var(--line);border-radius:13px;padding:10px;margin-top:10px;font-size:11.5px}.timeline div{display:flex;justify-content:space-between;gap:10px;padding:4px 0}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:11px 0}.vs>div{background:#101916;border:1px solid var(--line);padding:9px;border-radius:12px}.bigNum{font-size:21px;font-weight:900;margin-top:3px}
+.ringline{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:11px}.ringline div{height:27px;border-radius:8px;background:#182521;border:1px solid #30423b;font-size:9.5px;display:flex;align-items:center;justify-content:center;color:#90a9a0}.ringline .current{background:#9fd3bd;color:#102019;font-weight:900}.ringline .done{background:#365b4d;color:#e7f5ef}
+.mapWrap{
+  overflow:auto;
+  height:470px;
+  border-radius:21px;
+  margin-bottom:11px;
+  border:1px solid #31505a;
+  background:#10252a;
+  cursor:grab;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-x pan-y;
+  user-select:none;
+}
+.mapWrap.dragging{cursor:grabbing}
+.mapWrap::-webkit-scrollbar{width:10px;height:10px}
+.mapWrap::-webkit-scrollbar-thumb{background:#38514a;border-radius:999px;border:2px solid #10252a}
+.mapWrap::-webkit-scrollbar-corner{background:#10252a}
+.mapHint{
+  font-size:10px;
+  color:#aec0b9;
+  background:#111b18;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:7px 9px;
+  margin:-2px 0 8px;
+}
+.map{position:relative;width:720px;height:620px;background:
+ radial-gradient(circle at 9% 15%,#203f35 0 5%,transparent 5.7%),
+ radial-gradient(circle at 31% 11%,#284a3d 0 6%,transparent 6.7%),
+ radial-gradient(circle at 66% 12%,#23453a 0 6%,transparent 6.7%),
+ radial-gradient(circle at 91% 20%,#203f35 0 5%,transparent 5.7%),
+ radial-gradient(circle at 15% 51%,#29493d 0 6%,transparent 6.7%),
+ radial-gradient(circle at 50% 49%,#214337 0 7%,transparent 7.7%),
+ radial-gradient(circle at 84% 50%,#27483d 0 6%,transparent 6.7%),
+ radial-gradient(circle at 14% 84%,#203f35 0 5%,transparent 5.7%),
+ radial-gradient(circle at 48% 86%,#29493d 0 6%,transparent 6.7%),
+ radial-gradient(circle at 87% 83%,#23453a 0 6%,transparent 6.7%),
+ linear-gradient(160deg,#17363e,#10292e)}
+.map:after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.11) 1px,transparent 1px);background-size:22px 22px;opacity:.12;pointer-events:none}
+.place{position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:3}.place button{width:50px;height:50px;border-radius:16px;padding:0;font-size:21px;border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 22px rgba(0,0,0,.25)}.place span{display:block;font-size:9px;margin-top:3px;background:rgba(8,15,13,.84);padding:3px 5px;border-radius:7px;white-space:nowrap}
+.base button{background:#a8dcc6}.other button{background:#776e58;color:white}.free button{background:#304b43;color:white}.owned button{background:#47715f;color:white}.bot button{background:#735c42;color:white}.contest button{background:#854f4f;color:white}.rich button{box-shadow:0 0 0 2px #d6b86a,0 8px 22px rgba(0,0,0,.28)}
+.moveTag{position:absolute;transform:translate(-50%,-50%);z-index:4;background:#dcece5;color:#13211d;padding:3px 6px;border-radius:999px;font-size:8.5px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.22)}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}.legend span{font-size:9.5px;background:#111b18;border:1px solid var(--line);padding:5px 7px;border-radius:999px;color:#bfd0ca}
+.toast{position:fixed;left:50%;bottom:91px;transform:translateX(-50%) translateY(20px);opacity:0;background:#edf7f2;color:#122019;padding:9px 12px;border-radius:11px;font-weight:800;font-size:12px;transition:.2s;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.35);white-space:nowrap}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+ <div class="row space">
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.6</span></div><div class="tiny" id="where"></div></div>
+   <div class="pill" id="teamCount"></div>
+ </div>
+ <div class="resources" id="resources"></div>
+</header>
+
+<main>
+<section id="homeScreen"></section>
+<section id="teamsScreen" class="hidden"></section>
+<section id="storeScreen" class="hidden"></section>
+<section id="worldScreen" class="hidden"></section>
+</main>
+
+<nav>
+<button data-tab="home" class="active">🗺️<br>Карта</button>
+<button data-tab="teams">👥<br>Команды</button>
+<button data-tab="store">📦<br>Склад</button>
+<button data-tab="world">◎<br>Кольца</button>
+</nav>
+</div>
+
+<div id="modalBack" class="modalBack"><div id="modal" class="modal"></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), now=()=>Date.now(), fmt=n=>Math.max(0,Math.floor(n));
+let activeTab="home";
+
+const HOME_JOBS={
+ wood:{title:"Лесопилка",icon:"🌲",out:3,work:8,back:3,reward:{wood:12},rewardText:"+12 дерева"},
+ farm:{title:"Ферма",icon:"🌾",out:4,work:9,back:4,reward:{food:10,fiber:4},rewardText:"+10 еды · +4 волокна"},
+ stone:{title:"Карьер",icon:"🪨",out:5,work:10,back:5,reward:{stone:8},rewardText:"+8 камня"}
+};
+
+const OBJECT_DEFS=[
+ {id:"wood_a",type:"wood",name:"Лесопилка",icon:"🌲",x:16,y:18,travel:5,work:18,back:5,reward:{wood:22},rewardText:"+22 дерева",rich:false},
+ {id:"wood_b",type:"wood",name:"Богатая лесопилка",icon:"🌲",x:72,y:12,travel:8,work:20,back:8,reward:{wood:42},rewardText:"+42 дерева",rich:true},
+ {id:"farm_a",type:"farm",name:"Ферма",icon:"🌾",x:24,y:42,travel:6,work:18,back:6,reward:{food:20,fiber:5},rewardText:"+20 еды · +5 волокна",rich:false},
+ {id:"farm_b",type:"farm",name:"Плодородная ферма",icon:"🌾",x:86,y:37,travel:9,work:22,back:9,reward:{food:38,fiber:8},rewardText:"+38 еды · +8 волокна",rich:true},
+ {id:"stone_a",type:"stone",name:"Карьер",icon:"🪨",x:15,y:70,travel:6,work:19,back:6,reward:{stone:16},rewardText:"+16 камня",rich:false},
+ {id:"stone_b",type:"stone",name:"Большой карьер",icon:"🪨",x:62,y:69,travel:9,work:23,back:9,reward:{stone:30},rewardText:"+30 камня",rich:true},
+ {id:"iron_a",type:"iron",name:"Железная шахта",icon:"⛏️",x:42,y:24,travel:7,work:22,back:7,reward:{iron:16},rewardText:"+16 железа",rich:false},
+ {id:"iron_b",type:"iron",name:"Богатая шахта",icon:"⛏️",x:84,y:70,travel:10,work:26,back:10,reward:{iron:30},rewardText:"+30 железа",rich:true},
+ {id:"yard_a",type:"yard",name:"Верфь",icon:"⚓",x:40,y:80,travel:8,work:24,back:8,reward:{},rewardText:"доступ к ускоренной постройке",rich:false},
+ {id:"yard_b",type:"yard",name:"Большая верфь",icon:"⚓",x:55,y:44,travel:10,work:28,back:10,reward:{},rewardText:"ускорение корабля II класса",rich:true}
+];
+
+function baseObjectState(def){
+ return {...def,status:"free",owner:null,playerTeamId:null,playerArrive:0,playerLeave:0,botName:null,botArrive:0,botLeave:0,contest:false,contestEnd:0,playerControl:50,playerBoosts:0,botBoosts:0,botBudget:0,botNextBoost:0};
+}
+function fresh(){
+ const objects={};OBJECT_DEFS.forEach(d=>objects[d.id]=baseObjectState(d));
+ return {
+   ring:6,reached5:false,outpost:false,boat:false,boatBuilding:false,ship2:false,ship2Building:false,
+   resources:{wood:15,food:12,stone:8,fiber:0,cloth:0,iron:0},
+   teams:[
+    {id:1,name:"Команда A",phase:"idle",target:null,phaseEnd:0,missionEnd:0,reward:null,rewardText:"",special:null,objectId:null},
+    {id:2,name:"Команда B",phase:"idle",target:null,phaseEnd:0,missionEnd:0,reward:null,rewardText:"",special:null,objectId:null},
+    {id:3,name:"Команда C",phase:"idle",target:null,phaseEnd:0,missionEnd:0,reward:null,rewardText:"",special:null,objectId:null}
+   ],
+   objects, logs:["Цель сезона — добраться до Центрального острова."],
+   botClock:now()+8000
+ };
+}
+let S=fresh();
+function normalize(){
+ if(!S.objects){S.objects={};}
+ OBJECT_DEFS.forEach(d=>{if(!S.objects[d.id])S.objects[d.id]=baseObjectState(d);});
+}
+function save(){localStorage.setItem("centerlands_v05",JSON.stringify(S))}
+function load(){try{const x=JSON.parse(localStorage.getItem("centerlands_v05")||"null");if(x){S={...fresh(),...x};normalize();}}catch(e){}}
+load();
+
+function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),1600)}
+function log(t){S.logs.unshift(t);S.logs=S.logs.slice(0,30);save();render()}
+function gain(o){Object.entries(o||{}).forEach(([k,v])=>S.resources[k]+=v)}
+function costOK(c){return Object.entries(c).every(([k,v])=>S.resources[k]>=v)}
+function spend(c){if(!costOK(c))return false;Object.entries(c).forEach(([k,v])=>S.resources[k]-=v);return true}
+function freeTeams(){return S.teams.filter(t=>t.phase==="idle")}
+function freeTeam(){return freeTeams()[0]||null}
+function secLeft(ts){return Math.max(0,Math.ceil((ts-now())/1000))}
+function mmss(s){s=Math.max(0,Math.ceil(s));return s>=60?`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`:`${s}с`}
+function teamETA(t){return t.phase==="idle"?"":mmss((t.missionEnd-now())/1000)}
+function phaseETA(t){return t.phase==="idle"?"":mmss((t.phaseEnd-now())/1000)}
+function phaseName(t){
+ if(t.phase==="idle")return"Свободна";
+ if(t.phase==="out")return`Идёт → ${t.target}`;
+ if(t.phase==="work")return`Работает · ${t.target}`;
+ if(t.phase==="back")return`Возвращается ← ${t.target}`;
+ if(t.phase==="build")return t.target||"Строительство";
+ return t.phase;
+}
+function resourceHTML(){
+ const r=S.resources;
+ return [["🌲","Дерево",r.wood],["🌾","Еда",r.food],["🪨","Камень",r.stone],["🧵","Ткань",r.cloth],["⛓","Железо",r.iron],["🌿","Волокно",r.fiber]]
+   .map(x=>`<div class="res">${x[0]} ${x[1]}<b>${fmt(x[2])}</b></div>`).join("");
+}
+function teamChips(){
+ return `<div class="teamSummary">${S.teams.map(t=>`<div class="teamChip ${t.phase==="idle"?"idle":"busy"}"><b>${t.name}</b><span>${phaseName(t)}</span>${t.phase!=="idle"?`<span>этап ${phaseETA(t)} · домой ${teamETA(t)}</span>`:`<span class="ok">готова</span>`}</div>`).join("")}</div>`;
+}
+function openModal(x){$("#modal").innerHTML=x;$("#modalBack").classList.add("show")}
+function closeModal(){$("#modalBack").classList.remove("show")}
+$("#modalBack").addEventListener("click",e=>{if(e.target.id==="modalBack")closeModal()});
+
+function startHomeJob(key){
+ const j=HOME_JOBS[key],t=freeTeam();if(!t){toast("Все команды заняты");return}
+ openModal(`<h2>${j.icon} ${j.title}</h2><p>Ресурс попадёт на склад только после возвращения команды.</p>
+ <div class="timeline"><div><span>Путь туда</span><b>${j.out} сек</b></div><div><span>Работа</span><b>${j.work} сек</b></div><div><span>Путь назад</span><b>${j.back} сек</b></div><div><span>Результат</span><b>${j.rewardText}</b></div></div>
+ <div class="actions"><button onclick="confirmHomeJob('${key}',${t.id})">Отправить ${t.name}</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+}
+function confirmHomeJob(key,teamId){
+ closeModal();const j=HOME_JOBS[key],t=S.teams.find(x=>x.id===teamId);if(!t||t.phase!=="idle")return;
+ const ts=now();t.phase="out";t.target=j.title;t.phaseEnd=ts+j.out*1000;t.missionEnd=ts+(j.out+j.work+j.back)*1000;t.reward=j.reward;t.rewardText=j.rewardText;t.special=`home:${key}`;
+ log(`${t.name} отправлена: ${j.title}.`);
+}
+function advanceHomeJob(t,key){
+ const j=HOME_JOBS[key],ts=now();
+ if(t.phase==="out"&&ts>=t.phaseEnd){t.phase="work";t.phaseEnd=ts+j.work*1000;log(`${t.name} дошла до «${j.title}» и начала работу.`)}
+ else if(t.phase==="work"&&ts>=t.phaseEnd){t.phase="back";t.phaseEnd=ts+j.back*1000;log(`${t.name} закончила работу и возвращается.`)}
+ else if(t.phase==="back"&&ts>=t.phaseEnd){gain(t.reward);const txt=t.rewardText;resetTeam(t);log(`${t.name} вернулась. ${txt}.`)}
+}
+function resetTeam(t){t.phase="idle";t.target=null;t.phaseEnd=0;t.missionEnd=0;t.reward=null;t.rewardText="";t.special=null;t.objectId=null}
+
+function makeCloth(){
+ if(S.resources.fiber<8){toast("Нужно 8 волокна");return}
+ const t=freeTeam();if(!t){toast("Нет свободной команды");return}
+ S.resources.fiber-=8;const ts=now();t.phase="build";t.target="Ткацкая мастерская";t.phaseEnd=ts+7e3;t.missionEnd=t.phaseEnd;t.special="cloth";
+ log(`${t.name} начала изготовление ткани.`);
+}
+const boatCost={wood:36,food:26,stone:16,cloth:8};
+function buildBoat(){
+ if(S.boat||S.boatBuilding||!costOK(boatCost)){toast("Пока не хватает ресурсов");return}
+ const t=freeTeam();if(!t){toast("Нет свободной команды");return}
+ spend(boatCost);S.boatBuilding=true;const ts=now();t.phase="build";t.target="Шлюпка";t.phaseEnd=ts+10e3;t.missionEnd=t.phaseEnd;t.special="boat";log(`${t.name} строит шлюпку.`);
+}
+function sailFirst(){
+ if(!S.boat)return;
+ openModal(`<h2>⛵ Первый переход</h2><p>Спокойная вода между VI и V кольцами.</p><div class="timeline"><div><span>Путь</span><b>5 сек</b></div></div><div class="actions"><button onclick="confirmTravel(5,true)">Отправиться</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`);
+}
+function travelRing(target){if(target===5&&!S.reached5){toast("V кольцо ещё закрыто");return}openModal(`<h2>⛵ Переход на ${target===6?"VI":"V"} кольцо</h2><p>Ваши уже отправленные команды продолжают свои задания.</p><div class="timeline"><div><span>Путь</span><b>5 сек</b></div></div><div class="actions"><button onclick="confirmTravel(${target},false)">Отправиться</button><button class="ghost" onclick="closeModal()">Отмена</button></div>`)}
+function confirmTravel(target,first){closeModal();setTimeout(()=>{S.ring=target;if(target===5)S.reached5=true;save();log(`${target===5?"V":"VI"} кольцо достигнуто.`)},5000);toast("Корабль вышел в путь")}
+function foundOutpost(){
+ const t=freeTeam();if(!t){toast("Нет свободной команды");return}
+ const ts=now();t.phase="build";t.target="Основание форпоста";t.phaseEnd=ts+6e3;t.missionEnd=t.phaseEnd;t.special="outpost";log(`${t.name} разворачивает форпост.`);
+}
+
+const ship2Cost={wood:54,food:34,iron:14,cloth:12};
+function hasPlayerYard(){return Object.values(S.objects).some(o=>o.type==="yard"&&o.owner==="player"&&o.status==="owned")}
+function buildShip2(){
+ if(S.ship2||S.ship2Building)return;
+ if(!costOK(ship2Cost)){if(S.resources.cloth<ship2Cost.cloth)toast("Не хватает ткани — вернитесь на VI кольцо");else toast("Не хватает ресурсов");return}
+ const t=freeTeam();if(!t){toast("Нет свободной команды");return}
+ spend(ship2Cost);S.ship2Building=true;const sec=hasPlayerYard()?7:14;const ts=now();t.phase="build";t.target="Корабль II класса";t.phaseEnd=ts+sec*1000;t.missionEnd=t.phaseEnd;t.special="ship2";log(`${t.name} строит корабль II класса${hasPlayerYard()?" на занятой верфи — ускоренно":""}.`);
+}
+
+function objectStatusLabel(o){
+ if(o.contest)return"оспаривание";
+ if(o.status==="free"){
+   if(o.botName&&o.botArrive>now())return`${o.botName} идёт · ${mmss((o.botArrive-now())/1000)}`;
+   if(o.playerArrive>now())return`вы идёте · ${mmss((o.playerArrive-now())/1000)}`;
+   return"свободно";
+ }
+ if(o.owner==="player")return`ваша смена · ${mmss((o.playerLeave-now())/1000)}`;
+ if(o.owner)return`${o.owner} · ${mmss((o.botLeave-now())/1000)}`;
+ return"свободно";
+}
+function playerMissionOnObject(id){return S.teams.find(t=>t.objectId===id&&t.phase!=="idle")||null}
+
+function openObject(id){
+ const o=S.objects[id];if(!o)return;
+ let cls=o.rich?" · БОГАТЫЙ":"";
+ let body=`<h2>${o.icon} ${o.name}${cls}</h2><p>${o.rich?"Повышенная производительность. Такие объекты чаще привлекают других игроков.":"Обычный общий объект V кольца."}</p>
+ <div class="timeline"><div><span>Статус</span><b>${objectStatusLabel(o)}</b></div><div><span>Путь от форпоста</span><b>${o.travel} сек</b></div><div><span>Смена</span><b>${o.work} сек</b></div><div><span>Возврат</span><b>${o.back} сек</b></div><div><span>Награда</span><b>${o.rewardText}</b></div></div>`;
+ if(o.contest){
+   const pc=playerBoostCost(o);
+   body+=`<div class="vs"><div><div class="tiny">ВЫ · ${o.playerBoosts} усил.</div><div class="bigNum ok">${Math.round(o.playerControl)}%</div></div><div><div class="tiny">${o.botName} · ${o.botBoosts} усил.</div><div class="bigNum yellow">${Math.round(100-o.playerControl)}%</div></div></div>
+   <div class="timeline"><div><span>До решения</span><b>${mmss((o.contestEnd-now())/1000)}</b></div><div><span>Следующее усиление</span><b>${pc.wood} 🌲 + ${pc.food} 🌾</b></div></div>
+   <div class="actions"><button onclick="boostObject('${id}')">Усилить</button><button class="ghost" onclick="abandonObject('${id}')">Отступить</button></div>`;
+ } else {
+   const mission=playerMissionOnObject(id);
+   if(mission){
+     body+=`<p><b>${mission.name}</b>: ${phaseName(mission)}. Полное возвращение ${teamETA(mission)}.</p>`;
+   } else if(o.status==="free" && !o.playerArrive){
+     const t=freeTeam();
+     body+=`<div class="actions"><button onclick="sendToObject('${id}')" ${!t?"disabled":""}>${t?`Отправить ${t.name}`:"Нет свободной команды"}</button><button class="ghost" onclick="closeModal()">Закрыть</button></div>`;
+   } else if(o.owner==="player"){
+     body+=`<p>Объект занят вашей командой.</p><div class="actions"><button class="ghost" onclick="closeModal()">Закрыть</button></div>`;
+   } else {
+     const t=freeTeam();
+     body+=`<div class="actions"><button onclick="sendToObject('${id}')" ${!t?"disabled":""}>${t?`Отправить ${t.name} и оспорить`:"Нет свободной команды"}</button><button class="ghost" onclick="closeModal()">Закрыть</button></div>`;
+   }
+ }
+ openModal(body);
+}
+function sendToObject(id){
+ const o=S.objects[id],t=freeTeam();if(!t){toast("Нет свободной команды");return}
+ closeModal();const ts=now();t.phase="out";t.target=o.name;t.phaseEnd=ts+o.travel*1000;t.missionEnd=ts+(o.travel+o.work+o.back)*1000;t.special="object";t.objectId=id;o.playerTeamId=t.id;o.playerArrive=t.phaseEnd;
+ log(`${t.name} отправлена к объекту «${o.name}».`);
+}
+function occupyByPlayer(o,t){
+ o.owner="player";o.status="owned";o.playerArrive=0;o.playerLeave=now()+o.work*1000;
+ t.phase="work";t.phaseEnd=o.playerLeave;t.missionEnd=o.playerLeave+o.back*1000;
+ log(`${t.name} заняла «${o.name}».`);
+ if(o.botName&&o.botArrive>0&&o.botArrive<=now()+1200)startContest(o);
+}
+function startContest(o){
+ if(o.contest)return;
+ const bot=o.botName||"Alex";o.botName=bot;o.contest=true;o.status="contest";o.contestEnd=now()+18000;o.playerControl=50;o.playerBoosts=0;o.botBoosts=0;o.botBudget=2+(o.rich?2:1);o.botNextBoost=now()+2500;
+ log(`⚠ ${bot} оспаривает объект «${o.name}».`);
+ if(S.ring===5)openObject(o.id);
+}
+function playerBoostCost(o){return {wood:4+o.playerBoosts*3,food:2+o.playerBoosts*2}}
+function boostObject(id){
+ const o=S.objects[id],c=playerBoostCost(o);if(S.resources.wood<c.wood||S.resources.food<c.food){toast(`Нужно ${c.wood} дерева и ${c.food} еды`);return}
+ S.resources.wood-=c.wood;S.resources.food-=c.food;o.playerBoosts++;o.playerControl=Math.min(90,o.playerControl+11);o.botNextBoost=Math.min(o.botNextBoost,now()+1700);log(`Вы усилили команду на «${o.name}».`);openObject(id)
+}
+function abandonObject(id){
+ const o=S.objects[id],t=S.teams.find(x=>x.id===o.playerTeamId);if(t){t.phase="back";t.phaseEnd=now()+o.back*1000;t.missionEnd=t.phaseEnd}
+ o.contest=false;o.owner=o.botName;o.status="owned";o.botLeave=now()+o.work*1000;o.playerLeave=0;o.playerArrive=0;closeModal();log(`Вы уступили объект «${o.name}».`)
+}
+function resolveContest(o){
+ if(!o.contest)return;
+ const t=S.teams.find(x=>x.id===o.playerTeamId);
+ if(o.playerControl>=50){
+   o.contest=false;o.status="owned";o.owner="player";o.botName=null;o.botArrive=0;o.botLeave=0;
+   log(`Оспаривание «${o.name}» выиграно.`);
+ }else{
+   o.contest=false;o.status="owned";o.owner=o.botName||"Alex";o.botLeave=now()+o.work*1000;o.playerLeave=0;
+   if(t){t.phase="back";t.phaseEnd=now()+o.back*1000;t.missionEnd=t.phaseEnd}
+   log(`${o.owner} перехватил объект «${o.name}».`);
+ }
+ closeModal();
+}
+function maybeBotBoost(o){
+ if(!o.contest||o.botBudget<=0||now()<o.botNextBoost)return;
+ const chance=o.playerControl>50?.9:.45;
+ if(Math.random()<chance){o.botBoosts++;o.botBudget--;o.playerControl=Math.max(10,o.playerControl-10);log(`${o.botName} усилил команду на «${o.name}».`)}
+ o.botNextBoost=now()+2600+Math.random()*2400;
+}
+
+function tickPlayerObjectTeam(t){
+ const o=S.objects[t.objectId];if(!o){resetTeam(t);return}
+ const ts=now();
+ if(t.phase==="out"&&ts>=t.phaseEnd){
+   o.playerArrive=0;
+   if(o.status==="free"){
+     occupyByPlayer(o,t);
+   }else if(o.owner!=="player"){
+     t.phase="work";t.phaseEnd=ts+o.work*1000;t.missionEnd=t.phaseEnd+o.back*1000;
+     o.playerLeave=t.phaseEnd;o.playerTeamId=t.id;startContest(o);
+   }
+ }else if(t.phase==="work"&&ts>=t.phaseEnd&&!o.contest){
+   if(o.owner==="player"){
+     if(o.type!=="yard")gain(o.reward);
+     t.phase="back";t.phaseEnd=ts+o.back*1000;t.missionEnd=t.phaseEnd;
+     o.owner=null;o.status="free";o.playerLeave=0;o.playerTeamId=t.id;
+     log(`${t.name} закончила смену на «${o.name}»${o.type==="yard"?"":`. ${o.rewardText}`}. Возвращается.`);
+   }
+ }else if(t.phase==="back"&&ts>=t.phaseEnd){
+   o.playerTeamId=null;resetTeam(t);log(`${t.name} вернулась в форпост.`);
+ }
+}
+function botStartMission(){
+ if(S.ring!==5&&Math.random()<.5)return;
+ const freeBots=["Alex","Mila","Noah"];
+ const candidates=Object.values(S.objects).filter(o=>!o.botName&&!o.contest);
+ if(!candidates.length)return;
+ // Rich objects are more attractive.
+ let pool=[];candidates.forEach(o=>{pool.push(o);if(o.rich){pool.push(o);pool.push(o)}})
+ const o=pool[Math.floor(Math.random()*pool.length)], bot=freeBots[Math.floor(Math.random()*freeBots.length)];
+ o.botName=bot;o.botArrive=now()+(4+Math.floor(Math.random()*8))*1000;
+ log(`${bot} отправил команду к объекту «${o.name}».`);
+}
+function tickBots(){
+ const ts=now();
+ Object.values(S.objects).forEach(o=>{
+   if(o.botName&&o.botArrive>0&&ts>=o.botArrive){
+     o.botArrive=0;
+     if(o.status==="free" && !o.playerArrive){
+       o.owner=o.botName;o.status="owned";o.botLeave=ts+o.work*1000;log(`${o.botName} занял объект «${o.name}».`);
+     }else if(o.owner==="player" || o.playerArrive>0){
+       startContest(o);
+     }
+   }
+   if(o.owner&&o.owner!=="player"&&o.botLeave>0&&ts>=o.botLeave&&!o.contest){
+     const bot=o.owner;o.owner=null;o.status="free";o.botName=null;o.botLeave=0;log(`${bot} завершил смену на «${o.name}».`);
+   }
+   if(o.contest){maybeBotBoost(o);if(ts>=o.contestEnd)resolveContest(o)}
+ })
+ if(ts>=S.botClock){botStartMission();S.botClock=ts+7000+Math.random()*6000}
+}
+
+function processTeam(t){
+ const ts=now();
+ if(t.special?.startsWith("home:")){advanceHomeJob(t,t.special.split(":")[1]);return}
+ if(t.special==="cloth"&&t.phase==="build"&&ts>=t.phaseEnd){gain({cloth:8});resetTeam(t);log(`${t.name} изготовила +8 ткани.`);return}
+ if(t.special==="boat"&&t.phase==="build"&&ts>=t.phaseEnd){S.boat=true;S.boatBuilding=false;resetTeam(t);log("Шлюпка готова.");return}
+ if(t.special==="outpost"&&t.phase==="build"&&ts>=t.phaseEnd){S.outpost=true;resetTeam(t);log("Форпост основан.");return}
+ if(t.special==="ship2"&&t.phase==="build"&&ts>=t.phaseEnd){S.ship2=true;S.ship2Building=false;resetTeam(t);log("Корабль II класса готов.");return}
+ if(t.special==="object"){tickPlayerObjectTeam(t);return}
+}
+
+function home6(){
+ return `<div class="hero objective"><div class="tiny">VI КОЛЬЦО · БЕЗОПАСНАЯ ЗОНА</div><h1>Домашний остров</h1><p>Здесь никто не может оспаривать ваши объекты. Это стартовая база и источник базовых ресурсов.</p><div class="ringline"><div class="${S.ring===6?"current":"done"}">VI</div><div class="${S.ring===5?"current":""}">V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div></div>
+ ${teamChips()}
+ <div class="section-title">Безопасная добыча</div>
+ ${Object.entries(HOME_JOBS).map(([k,j])=>`<div class="card"><div class="row space"><div><h3>${j.icon} ${j.title}</h3><p>${j.rewardText}</p></div><button onclick="startHomeJob('${k}')">Отправить</button></div><div class="meta">${j.out} сек туда · ${j.work} сек работа · ${j.back} сек обратно</div></div>`).join("")}
+ <div class="card"><div class="row space"><div><h3>🧵 Ткацкая мастерская</h3><p>8 волокна → 8 ткани</p></div><button onclick="makeCloth()">Сделать</button></div></div>
+ <div class="card objective"><h3>${S.boat?"✅ Шлюпка готова":"⛵ Первая шлюпка"}</h3><p>🌲36 · 🌾26 · 🪨16 · 🧵8</p><div class="actions">${S.boat?(S.reached5?`<button onclick="travelRing(5)">Вернуться на V</button>`:`<button onclick="sailFirst()">Отправиться на V</button>`):`<button onclick="buildBoat()">Построить</button>`}</div></div>`;
+}
+function objectClass(o){
+ if(o.contest)return"contest";
+ if(o.owner==="player")return"owned";
+ if(o.owner)return"bot";
+ return"free";
+}
+function botMarker(o){
+ if(o.botName&&o.botArrive>now()){
+   const px=(50+o.x)/2,py=(53+o.y)/2;
+   return `<div class="moveTag" style="left:${px}%;top:${py}%">${o.botName} → ${mmss((o.botArrive-now())/1000)}</div>`;
+ }
+ return"";
+}
+function playerMarker(o){
+ if(o.playerArrive>now()){
+   const px=(50+o.x)/2,py=(53+o.y)/2;
+   return `<div class="moveTag" style="left:${px}%;top:${py}%">Вы → ${mmss((o.playerArrive-now())/1000)}</div>`;
+ }
+ return"";
+}
+function map5(){
+ const c=ship2Cost;
+ return `<div class="hero"><div class="row space"><div><div class="tiny">V КОЛЬЦО · СЕКТОР 12</div><h1>Общий регион</h1></div><button class="ghost" onclick="travelRing(6)">← VI</button></div><p>Начиная отсюда, все производственные объекты вне форпостов общие. Можно выбрать спокойный обычный объект или рискнуть ради более богатого.</p>
+ <div class="ringline"><div class="done">VI</div><div class="current">V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
+ <div class="legend"><span>🟢 ваша смена</span><span>🟤 другой игрок</span><span>🔴 спор</span><span>⭐ богатый объект</span></div></div>
+ ${teamChips()}
+ ${!S.outpost?`<div class="card objective"><h3>Сначала основать форпост</h3><p>Форпост — безопасная база этого кольца.</p><div class="actions"><button onclick="foundOutpost()">Основать</button></div></div>`:""}
+ <div class="mapHint">Перемещение по карте: зажмите пустое место и тяните мышкой. На телефоне — двигайте пальцем.</div>
+ <div class="mapWrap"><div class="map">
+   <div class="place base" style="left:50%;top:53%"><button>🏕️</button><span>${S.outpost?"Ваш форпост":"точка высадки"}</span></div>
+   <div class="place other" style="left:8%;top:31%"><button>🏕️</button><span>Alex</span></div>
+   <div class="place other" style="left:93%;top:54%"><button>🏕️</button><span>Mila</span></div>
+   <div class="place other" style="left:33%;top:92%"><button>🏕️</button><span>Noah</span></div>
+   <div class="place free" style="left:78%;top:91%"><button>＋</button><span>свободная высадка</span></div>
+   ${Object.values(S.objects).map(o=>`<div class="place ${objectClass(o)} ${o.rich?"rich":""}" style="left:${o.x}%;top:${o.y}%"><button onclick="openObject('${o.id}')">${o.icon}</button><span>${o.rich?"⭐ ":""}${o.name} · ${objectStatusLabel(o)}</span></div>${botMarker(o)}${playerMarker(o)}`).join("")}
+ </div></div>
+ <div class="card objective"><h3>${S.ship2?"✅ Корабль II класса готов":"⛵ Цель V кольца: корабль II класса"}</h3><p>${S.ship2?"Вы готовы к следующему кольцу.":"Для него нужны ресурсы этого кольца. Занятая верфь сокращает время строительства вдвое."}</p><div class="meta">🌲 ${fmt(S.resources.wood)}/${c.wood} · 🌾 ${fmt(S.resources.food)}/${c.food} · ⛓ ${fmt(S.resources.iron)}/${c.iron} · 🧵 ${fmt(S.resources.cloth)}/${c.cloth}</div><div class="actions">${S.ship2?`<button disabled>IV — следующий этап</button>`:`<button onclick="buildShip2()">Построить</button>${S.resources.cloth<c.cloth?`<button class="secondary" onclick="travelRing(6)">Вернуться за тканью</button>`:""}`}</div></div>`;
+}
+function renderHome(){$("#homeScreen").innerHTML=S.ring===6?home6():map5()}
+function renderTeams(){
+ $("#teamsScreen").innerHTML=`<div class="hero"><h1>Команды · ${freeTeams().length}/${S.teams.length} свободно</h1><p>Видно, куда идёт каждая команда и сколько осталось до полного возвращения.</p></div><div class="card">${S.teams.map(t=>`<div class="teamRow"><div><b>${t.name}</b><div class="teamDetail">${phaseName(t)}${t.phase!=="idle"?`<br>Этап: ${phaseETA(t)} · домой: ${teamETA(t)}`:""}</div></div><span class="${t.phase==="idle"?"ok":"yellow"}">${t.phase==="idle"?"ГОТОВА":"ЗАНЯТА"}</span></div>`).join("")}</div><div class="section-title">Журнал</div><div class="card log">${S.logs.map(x=>`<div>${x}</div>`).join("")}</div>`;
+}
+function renderStore(){
+ const r=S.resources;$("#storeScreen").innerHTML=`<div class="hero"><h1>Склад</h1><p>Пока склад общий для VI и V. Логистика между кольцами будет отдельным тестом.</p></div><div class="card">${[["🌲","Дерево",r.wood],["🌾","Еда",r.food],["🪨","Камень",r.stone],["🌿","Волокно",r.fiber],["🧵","Ткань",r.cloth],["⛓","Железо",r.iron]].map(x=>`<div class="teamRow"><b>${x[0]} ${x[1]}</b><span>${fmt(x[2])}</span></div>`).join("")}</div><div class="card"><div class="actions"><button class="danger" onclick="resetGame()">Сбросить прогресс</button></div></div>`;
+}
+function renderWorld(){
+ $("#worldScreen").innerHTML=`<div class="hero objective"><div class="tiny">КАРТА СЕЗОНА</div><h1>Путь к Центру</h1><div class="ringline"><div class="${S.ring===6?"current":"done"}">VI</div><div class="${S.ring===5?"current":""}">V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div></div>${S.reached5?`<div class="card"><h3>Открытые маршруты</h3><div class="actions"><button class="secondary" onclick="travelRing(6)">VI</button><button class="secondary" onclick="travelRing(5)">V</button></div></div>`:""}<div class="card"><h3>IV кольцо</h3><p>Следующий слой — специализации.</p></div>`;
+}
+
+function enableMapPan(){
+ const wrap=document.querySelector(".mapWrap");
+ if(!wrap || wrap.dataset.panReady==="1") return;
+ wrap.dataset.panReady="1";
+
+ // Start near the player's outpost instead of top-left.
+ if(!wrap.dataset.centered){
+   wrap.scrollLeft=Math.max(0,(720-wrap.clientWidth)/2);
+   wrap.scrollTop=Math.max(0,(620-wrap.clientHeight)/2);
+   wrap.dataset.centered="1";
+ }
+
+ let dragging=false,startX=0,startY=0,startLeft=0,startTop=0,moved=false;
+
+ wrap.addEventListener("pointerdown",e=>{
+   if(e.target.closest("button")) return;
+   dragging=true;moved=false;
+   startX=e.clientX;startY=e.clientY;
+   startLeft=wrap.scrollLeft;startTop=wrap.scrollTop;
+   wrap.classList.add("dragging");
+   try{wrap.setPointerCapture(e.pointerId)}catch(_){}
+ });
+
+ wrap.addEventListener("pointermove",e=>{
+   if(!dragging) return;
+   const dx=e.clientX-startX,dy=e.clientY-startY;
+   if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
+   wrap.scrollLeft=startLeft-dx;
+   wrap.scrollTop=startTop-dy;
+   e.preventDefault();
+ });
+
+ const stop=e=>{
+   if(!dragging)return;
+   dragging=false;
+   wrap.classList.remove("dragging");
+   try{wrap.releasePointerCapture(e.pointerId)}catch(_){}
+ };
+ wrap.addEventListener("pointerup",stop);
+ wrap.addEventListener("pointercancel",stop);
+ wrap.addEventListener("pointerleave",e=>{ if(e.buttons===0) stop(e); });
+
+ // Trackpad/mouse wheel: vertical wheel pans vertically;
+ // Shift+wheel or horizontal trackpad movement pans horizontally.
+ wrap.addEventListener("wheel",e=>{
+   if(Math.abs(e.deltaX)>0 || e.shiftKey){
+     wrap.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
+     if(e.shiftKey)e.preventDefault();
+   }
+ },{passive:false});
+}
+
+function render(){
+ $("#resources").innerHTML=resourceHTML();$("#where").textContent=S.ring===6?"VI кольцо · домашний остров":"V кольцо · сектор 12";$("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
+ ["home","teams","store","world"].forEach(k=>{$("#"+k+"Screen").classList.toggle("hidden",activeTab!==k);document.querySelector(`[data-tab="${k}"]`).classList.toggle("active",activeTab===k)});
+ renderHome();renderTeams();renderStore();renderWorld();enableMapPan();
+}
+function resetGame(){localStorage.removeItem("centerlands_v05");S=fresh();activeTab="home";closeModal();render();toast("Прогресс сброшен")}
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{activeTab=b.dataset.tab;render()}));
+
+setInterval(()=>{S.teams.forEach(processTeam);tickBots();},250);
+setInterval(()=>{save();render()},1000);
+render();
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
