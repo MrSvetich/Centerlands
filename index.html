@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.10</title>
+<title>Centerlands — Prototype v0.11</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -112,13 +112,36 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 }
 
 .homeMoveTag{z-index:12;pointer-events:none;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+
+.contestNotice{
+ position:fixed;
+ left:50%;
+ bottom:92px;
+ transform:translateX(-50%) translateY(18px);
+ width:min(calc(100% - 22px),448px);
+ background:#1b2522;
+ border:1px solid #775b4d;
+ border-radius:16px;
+ padding:11px;
+ opacity:0;
+ pointer-events:none;
+ z-index:45;
+ box-shadow:0 10px 34px rgba(0,0,0,.42);
+ transition:.18s;
+}
+.contestNotice.show{opacity:1;pointer-events:auto;transform:translateX(-50%) translateY(0)}
+.contestNotice .noticeTitle{font-weight:900;font-size:12.5px;margin-bottom:4px}
+.contestNotice .noticeText{font-size:11px;color:var(--muted);line-height:1.35}
+.contestNotice .actions{margin-top:8px}
+.contestNotice .actions button{padding:8px 10px;font-size:10.5px}
+
 </style>
 </head>
 <body>
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.10</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.11</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -141,6 +164,7 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 
 <div id="modalBack" class="modalBack"><div id="modal" class="modal"></div></div>
 <div id="toast" class="toast"></div>
+<div id="contestNotice" class="contestNotice"></div>
 
 <script>
 const $=s=>document.querySelector(s), now=()=>Date.now(), fmt=n=>Math.max(0,Math.floor(n));
@@ -168,7 +192,7 @@ const OBJECT_DEFS=[
 ];
 
 function baseObjectState(def){
- return {...def,status:"free",owner:null,playerTeamId:null,playerArrive:0,playerLeave:0,botName:null,botArrive:0,botLeave:0,contest:false,contestEnd:0,playerControl:50,playerBoosts:0,botBoosts:0,botBudget:0,botNextBoost:0};
+ return {...def,status:"free",owner:null,playerTeamId:null,playerArrive:0,playerLeave:0,botName:null,botArrive:0,botLeave:0,contest:false,contestEnd:0,playerControl:50,playerBoosts:0,botBoosts:0,botBudget:0,botNextBoost:0,botResolve:.5,botSkips:0,lastBotAction:0};
 }
 function fresh(){
  const objects={};OBJECT_DEFS.forEach(d=>objects[d.id]=baseObjectState(d));
@@ -187,7 +211,10 @@ function fresh(){
 let S=fresh();
 function normalize(){
  if(!S.objects){S.objects={};}
- OBJECT_DEFS.forEach(d=>{if(!S.objects[d.id])S.objects[d.id]=baseObjectState(d);});
+ OBJECT_DEFS.forEach(d=>{
+   if(!S.objects[d.id])S.objects[d.id]=baseObjectState(d);
+   else S.objects[d.id]={...baseObjectState(d),...S.objects[d.id]};
+ });
 }
 function save(){localStorage.setItem("centerlands_v05",JSON.stringify(S))}
 function load(){try{const x=JSON.parse(localStorage.getItem("centerlands_v05")||"null");if(x){S={...fresh(),...x};normalize();}}catch(e){}}
@@ -195,6 +222,7 @@ load();
 
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove("show"),1600)}
 function log(t){S.logs.unshift(t);S.logs=S.logs.slice(0,30);save();render()}
+function logQuiet(t){S.logs.unshift(t);S.logs=S.logs.slice(0,30);save();refreshTopUI();refreshMap5Dynamic();}
 function gain(o){Object.entries(o||{}).forEach(([k,v])=>S.resources[k]+=v)}
 function costOK(c){return Object.entries(c).every(([k,v])=>S.resources[k]>=v)}
 function spend(c){if(!costOK(c))return false;Object.entries(c).forEach(([k,v])=>S.resources[k]-=v);return true}
@@ -345,7 +373,7 @@ function openObject(id){
    const pc=playerBoostCost(o);
    body+=`<div class="vs"><div><div class="tiny">ВЫ · ${o.playerBoosts} усил.</div><div class="bigNum ok">${Math.round(o.playerControl)}%</div></div><div><div class="tiny">${o.botName} · ${o.botBoosts} усил.</div><div class="bigNum yellow">${Math.round(100-o.playerControl)}%</div></div></div>
    <div class="timeline"><div><span>До решения</span><b>${mmss((o.contestEnd-now())/1000)}</b></div><div><span>Следующее усиление</span><b>${pc.wood} 🌲 + ${pc.food} 🌾</b></div></div>
-   <div class="actions"><button onclick="boostObject('${id}')">Усилить</button><button class="ghost" onclick="abandonObject('${id}')">Отступить</button></div>`;
+   <div class="actions"><button onclick="boostObject('${id}')">Усилить</button><button class="ghost" onclick="abandonObject('${id}')">Отступить</button><button class="ghost" onclick="closeModal()">Закрыть</button></div>`;
  } else {
    const mission=playerMissionOnObject(id);
    if(mission){
@@ -373,39 +401,172 @@ function occupyByPlayer(o,t){
  log(`${t.name} заняла «${o.name}».`);
  if(o.botName&&o.botArrive>0&&o.botArrive<=now()+1200)startContest(o);
 }
+
+let contestNoticeId=null;
+function hideContestNotice(){
+ const el=$("#contestNotice");
+ if(!el)return;
+ el.classList.remove("show");
+ contestNoticeId=null;
+}
+function showContestNotice(o,kind="boost"){
+ if(!o||!o.contest)return;
+ contestNoticeId=o.id;
+ const el=$("#contestNotice");
+ if(!el)return;
+ const pc=playerBoostCost(o);
+ const who=o.botName||"Соперник";
+ const title=kind==="start"?`⚠ ${who} оспаривает ${o.name}`:`⚠ ${who} усилил команду`;
+ const text=kind==="start"
+   ?`Спор идёт в фоне. Сейчас у вас ${Math.round(o.playerControl)}% контроля.`
+   :`На «${o.name}» у вас осталось ${Math.round(o.playerControl)}% контроля. Следующее усиление: ${pc.wood} 🌲 + ${pc.food} 🌾.`;
+ el.innerHTML=`<div class="noticeTitle">${title}</div>
+ <div class="noticeText">${text}</div>
+ <div class="actions">
+  <button onclick="boostObject('${o.id}')">Усилить</button>
+  <button class="ghost" onclick="abandonObject('${o.id}')">Отступить</button>
+  <button class="ghost" onclick="hideContestNotice()">Позже</button>
+ </div>`;
+ el.classList.add("show");
+}
+function botConcedes(o){
+ if(!o.contest)return;
+ const bot=o.botName||"Соперник";
+ o.contest=false;
+ o.status="owned";
+ o.owner="player";
+ o.botName=null;
+ o.botArrive=0;
+ o.botLeave=0;
+ o.botBudget=0;
+ hideContestNotice();
+ logQuiet(`${bot} решил не продолжать спор за «${o.name}».`);
+ toast(`${bot} уступил объект`);
+}
+
 function startContest(o){
  if(o.contest)return;
- const bot=o.botName||"Alex";o.botName=bot;o.contest=true;o.status="contest";o.contestEnd=now()+18000;o.playerControl=50;o.playerBoosts=0;o.botBoosts=0;o.botBudget=2+(o.rich?2:1);o.botNextBoost=now()+2500;
- log(`⚠ ${bot} оспаривает объект «${o.name}».`);
- if(S.ring===5)openObject(o.id);
+ const bot=o.botName||"Alex";
+ o.botName=bot;
+ o.contest=true;
+ o.status="contest";
+ o.contestEnd=now()+18000;
+ o.playerControl=50;
+ o.playerBoosts=0;
+ o.botBoosts=0;
+
+ // Different opponents value the object differently.
+ // On a normal object some will spend nothing at all; rich objects attract more persistent rivals.
+ o.botResolve=Math.random();
+ o.botBudget=o.rich
+   ? 1+Math.floor(Math.random()*4)
+   : Math.floor(Math.random()*4);
+ o.botSkips=0;
+ o.lastBotAction=0;
+ o.botNextBoost=now()+2200+Math.random()*2200;
+
+ logQuiet(`⚠ ${bot} оспаривает объект «${o.name}».`);
+ showContestNotice(o,"start");
 }
 function playerBoostCost(o){return {wood:4+o.playerBoosts*3,food:2+o.playerBoosts*2}}
 function boostObject(id){
- const o=S.objects[id],c=playerBoostCost(o);if(S.resources.wood<c.wood||S.resources.food<c.food){toast(`Нужно ${c.wood} дерева и ${c.food} еды`);return}
- S.resources.wood-=c.wood;S.resources.food-=c.food;o.playerBoosts++;o.playerControl=Math.min(90,o.playerControl+11);o.botNextBoost=Math.min(o.botNextBoost,now()+1700);log(`Вы усилили команду на «${o.name}».`);openObject(id)
+ const o=S.objects[id];
+ if(!o||!o.contest)return;
+ const c=playerBoostCost(o);
+ if(S.resources.wood<c.wood||S.resources.food<c.food){
+   toast(`Нужно ${c.wood} дерева и ${c.food} еды`);
+   return;
+ }
+ S.resources.wood-=c.wood;
+ S.resources.food-=c.food;
+ o.playerBoosts++;
+ o.playerControl=Math.min(90,o.playerControl+11);
+ o.botNextBoost=Math.min(o.botNextBoost,now()+1500+Math.random()*1200);
+ hideContestNotice();
+ closeModal();
+ logQuiet(`Вы усилили команду на «${o.name}».`);
+ toast("Команда усилена · спор продолжается в фоне");
 }
 function abandonObject(id){
- const o=S.objects[id],t=S.teams.find(x=>x.id===o.playerTeamId);if(t){t.phase="back";t.phaseEnd=now()+o.back*1000;t.missionEnd=t.phaseEnd}
- o.contest=false;o.owner=o.botName;o.status="owned";o.botLeave=now()+o.work*1000;o.playerLeave=0;o.playerArrive=0;closeModal();log(`Вы уступили объект «${o.name}».`)
+ const o=S.objects[id];
+ if(!o||!o.contest)return;
+ const t=S.teams.find(x=>x.id===o.playerTeamId);
+ if(t){
+   t.phase="back";
+   t.phaseEnd=now()+o.back*1000;
+   t.missionEnd=t.phaseEnd;
+ }
+ o.contest=false;
+ o.owner=o.botName;
+ o.status="owned";
+ o.botLeave=now()+o.work*1000;
+ o.playerLeave=0;
+ o.playerArrive=0;
+ hideContestNotice();
+ closeModal();
+ logQuiet(`Вы уступили объект «${o.name}».`);
+ toast("Команда отступает");
 }
 function resolveContest(o){
  if(!o.contest)return;
  const t=S.teams.find(x=>x.id===o.playerTeamId);
  if(o.playerControl>=50){
-   o.contest=false;o.status="owned";o.owner="player";o.botName=null;o.botArrive=0;o.botLeave=0;
-   log(`Оспаривание «${o.name}» выиграно.`);
+   const bot=o.botName||"Соперник";
+   o.contest=false;
+   o.status="owned";
+   o.owner="player";
+   o.botName=null;
+   o.botArrive=0;
+   o.botLeave=0;
+   hideContestNotice();
+   logQuiet(`Оспаривание «${o.name}» выиграно. ${bot} отступил.`);
+   toast("Спор выигран");
  }else{
-   o.contest=false;o.status="owned";o.owner=o.botName||"Alex";o.botLeave=now()+o.work*1000;o.playerLeave=0;
-   if(t){t.phase="back";t.phaseEnd=now()+o.back*1000;t.missionEnd=t.phaseEnd}
-   log(`${o.owner} перехватил объект «${o.name}».`);
+   const bot=o.botName||"Alex";
+   o.contest=false;
+   o.status="owned";
+   o.owner=bot;
+   o.botLeave=now()+o.work*1000;
+   o.playerLeave=0;
+   if(t){
+     t.phase="back";
+     t.phaseEnd=now()+o.back*1000;
+     t.missionEnd=t.phaseEnd;
+   }
+   hideContestNotice();
+   logQuiet(`${bot} перехватил объект «${o.name}».`);
+   toast("Соперник выиграл спор");
  }
  closeModal();
 }
 function maybeBotBoost(o){
- if(!o.contest||o.botBudget<=0||now()<o.botNextBoost)return;
- const chance=o.playerControl>50?.9:.45;
- if(Math.random()<chance){o.botBoosts++;o.botBudget--;o.playerControl=Math.max(10,o.playerControl-10);log(`${o.botName} усилил команду на «${o.name}».`)}
- o.botNextBoost=now()+2600+Math.random()*2400;
+ if(!o.contest||now()<o.botNextBoost)return;
+
+ // Rival decisions are intentionally not deterministic.
+ // Persistence, richness of the object and current balance all affect whether they spend more.
+ const behind=o.playerControl>50;
+ const baseChance=.20 + o.botResolve*.42 + (o.rich?.13:0) + (behind?.10:0);
+ const canBoost=o.botBudget>0;
+
+ if(canBoost && Math.random()<baseChance){
+   o.botBoosts++;
+   o.botBudget--;
+   o.botSkips=0;
+   o.playerControl=Math.max(10,o.playerControl-10);
+   o.lastBotAction=now();
+   logQuiet(`${o.botName} усилил команду на «${o.name}».`);
+   showContestNotice(o,"boost");
+ }else{
+   o.botSkips++;
+
+   // Some rivals decide the resource is no longer worth the cost and leave before the timer.
+   const concedeChance=(o.rich?.08:.20) + (o.playerControl>=61?.22:0) + (o.botSkips>=2?.18:0) - o.botResolve*.12;
+   if(o.playerControl>=50 && Math.random()<Math.max(.05,concedeChance)){
+     botConcedes(o);
+     return;
+   }
+ }
+ o.botNextBoost=now()+2300+Math.random()*3300;
 }
 
 function tickPlayerObjectTeam(t){
@@ -658,6 +819,10 @@ function refreshTopUI(){
  if(summary) summary.innerHTML=teamChipContent();
 }
 function refreshMap5Dynamic(){
+ if(contestNoticeId){
+   const no=S.objects[contestNoticeId];
+   if(!no||!no.contest)hideContestNotice();
+ }
  if(S.ring!==5 || activeTab!=="home") return;
  Object.values(S.objects).forEach(o=>{
    const el=document.querySelector(`[data-object-id="${o.id}"]`);
