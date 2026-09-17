@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.8</title>
+<title>Centerlands — Prototype v0.9</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -117,7 +117,7 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.8</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.9</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -145,6 +145,7 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 const $=s=>document.querySelector(s), now=()=>Date.now(), fmt=n=>Math.max(0,Math.floor(n));
 let activeTab="home";
 let mapScroll={left:null,top:null};
+let mapInteracting=false;
 
 const HOME_JOBS={
  wood:{title:"Лесопилка",icon:"🌲",out:3,work:8,back:3,reward:{wood:12},rewardText:"+12 дерева"},
@@ -231,7 +232,7 @@ function startHomeJob(key){
 function confirmHomeJob(key,teamId){
  closeModal();const j=HOME_JOBS[key],t=S.teams.find(x=>x.id===teamId);if(!t||t.phase!=="idle")return;
  const ts=now();t.phase="out";t.target=j.title;t.phaseEnd=ts+j.out*1000;t.missionEnd=ts+(j.out+j.work+j.back)*1000;t.reward=j.reward;t.rewardText=j.rewardText;t.special=`home:${key}`;
- log(`${t.name} отправлена: ${j.title}.`);
+ log(`${t.name} отправлена: ${j.title}.`);save();render();
 }
 function advanceHomeJob(t,key){
  const j=HOME_JOBS[key],ts=now();
@@ -253,7 +254,7 @@ function openHomeObject(key){
   <div><span>Результат</span><b>${j.rewardText}</b></div>
  </div>
  <div class="actions">
-  <button onclick="startHomeJob('${key}');closeModal()" ${!t?"disabled":""}>${t?`Отправить ${t.name}`:"Нет свободной команды"}</button>
+  <button onclick="confirmHomeJob('${key}',${t?t.id:0});closeModal()" ${!t?"disabled":""}>${t?`Отправить ${t.name}`:"Нет свободной команды"}</button>
   <button class="ghost" onclick="closeModal()">Закрыть</button>
  </div>`);
 }
@@ -290,13 +291,13 @@ function makeCloth(){
  if(S.resources.fiber<8){toast("Нужно 8 волокна");return}
  const t=freeTeam();if(!t){toast("Нет свободной команды");return}
  S.resources.fiber-=8;const ts=now();t.phase="build";t.target="Ткацкая мастерская";t.phaseEnd=ts+7e3;t.missionEnd=t.phaseEnd;t.special="cloth";
- log(`${t.name} начала изготовление ткани.`);
+ log(`${t.name} начала изготовление ткани.`);save();render();
 }
 const boatCost={wood:36,food:26,stone:16,cloth:8};
 function buildBoat(){
  if(S.boat||S.boatBuilding||!costOK(boatCost)){toast("Пока не хватает ресурсов");return}
  const t=freeTeam();if(!t){toast("Нет свободной команды");return}
- spend(boatCost);S.boatBuilding=true;const ts=now();t.phase="build";t.target="Шлюпка";t.phaseEnd=ts+10e3;t.missionEnd=t.phaseEnd;t.special="boat";log(`${t.name} строит шлюпку.`);
+ spend(boatCost);S.boatBuilding=true;const ts=now();t.phase="build";t.target="Шлюпка";t.phaseEnd=ts+10e3;t.missionEnd=t.phaseEnd;t.special="boat";log(`${t.name} строит шлюпку.`);save();render();
 }
 function sailFirst(){
  if(!S.boat)return;
@@ -546,17 +547,16 @@ function enableMapPan(){
  if(!wrap || wrap.dataset.panReady==="1") return;
  wrap.dataset.panReady="1";
 
- requestAnimationFrame(()=>{
-   if(mapScroll.left===null || mapScroll.top===null){
-     wrap.scrollLeft=Math.max(0,(720-wrap.clientWidth)/2);
-     wrap.scrollTop=Math.max(0,(620-wrap.clientHeight)/2);
-     mapScroll.left=wrap.scrollLeft;
-     mapScroll.top=wrap.scrollTop;
-   }else{
-     wrap.scrollLeft=mapScroll.left;
-     wrap.scrollTop=mapScroll.top;
-   }
- });
+ // Restore immediately to avoid a visible jump after the 1-second UI refresh.
+ if(mapScroll.left===null || mapScroll.top===null){
+   wrap.scrollLeft=Math.max(0,(720-wrap.clientWidth)/2);
+   wrap.scrollTop=Math.max(0,(620-wrap.clientHeight)/2);
+   mapScroll.left=wrap.scrollLeft;
+   mapScroll.top=wrap.scrollTop;
+ }else{
+   wrap.scrollLeft=mapScroll.left;
+   wrap.scrollTop=mapScroll.top;
+ }
 
  let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
  const remember=()=>{mapScroll.left=wrap.scrollLeft;mapScroll.top=wrap.scrollTop;};
@@ -566,6 +566,7 @@ function enableMapPan(){
  wrap.addEventListener("pointerdown",e=>{
    if(e.target.closest("button")) return;
    dragging=true;
+   mapInteracting=true;
    startX=e.clientX;startY=e.clientY;
    startLeft=wrap.scrollLeft;startTop=wrap.scrollTop;
    wrap.classList.add("dragging");
@@ -577,26 +578,34 @@ function enableMapPan(){
    wrap.scrollLeft=startLeft-(e.clientX-startX);
    wrap.scrollTop=startTop-(e.clientY-startY);
    remember();
-   e.preventDefault();
+   if(e.cancelable)e.preventDefault();
  });
 
  const stop=e=>{
    if(!dragging)return;
    dragging=false;
    remember();
+   mapInteracting=false;
    wrap.classList.remove("dragging");
    try{wrap.releasePointerCapture(e.pointerId)}catch(_){}
  };
  wrap.addEventListener("pointerup",stop);
  wrap.addEventListener("pointercancel",stop);
- wrap.addEventListener("pointerleave",e=>{if(e.buttons===0)stop(e)});
+
+ // Safari/iPhone safety: don't rebuild the map while a finger is on it.
+ wrap.addEventListener("touchstart",()=>{mapInteracting=true},{passive:true});
+ wrap.addEventListener("touchend",()=>{remember();mapInteracting=false},{passive:true});
+ wrap.addEventListener("touchcancel",()=>{remember();mapInteracting=false},{passive:true});
 
  wrap.addEventListener("wheel",e=>{
+   mapInteracting=true;
    if(Math.abs(e.deltaX)>0 || e.shiftKey){
      wrap.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
-     remember();
-     if(e.shiftKey)e.preventDefault();
+     if(e.shiftKey && e.cancelable)e.preventDefault();
    }
+   remember();
+   clearTimeout(wrap._wheelTimer);
+   wrap._wheelTimer=setTimeout(()=>{mapInteracting=false},160);
  },{passive:false});
 }
 
@@ -609,7 +618,7 @@ function resetGame(){localStorage.removeItem("centerlands_v05");S=fresh();active
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{activeTab=b.dataset.tab;render()}));
 
 setInterval(()=>{S.teams.forEach(processTeam);tickBots();},250);
-setInterval(()=>{save();render()},1000);
+setInterval(()=>{save();if(!mapInteracting)render()},1000);
 render();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
