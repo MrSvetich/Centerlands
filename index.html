@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.14</title>
+<title>Centerlands — Prototype v0.15</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -273,7 +273,7 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 .visualHomeMap{
  background-image:
    linear-gradient(rgba(8,20,18,.04),rgba(8,20,18,.06)),
-   url("home_island_v014.jpg") !important;
+   url("home_island_v015.png") !important;
 }
 .seaShimmer{
  position:absolute;inset:0;
@@ -292,24 +292,6 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
  from{background-position:0 0,0 0,-260px 0}
  to{background-position:40px 16px,-34px 12px,260px 0}
 }
-.layerTree{
- position:absolute;
- width:24px;height:42px;
- transform:translate(-50%,-100%);
- z-index:5;
- filter:drop-shadow(0 5px 3px rgba(0,0,0,.28));
-}
-.layerTree:before{
- content:"";
- position:absolute;left:9px;bottom:0;width:6px;height:14px;
- background:#5d422c;border-radius:3px;
-}
-.layerTree:after{
- content:"";
- position:absolute;left:1px;top:0;width:22px;height:30px;
- background:linear-gradient(135deg,#4d8456,#274f37);
- clip-path:polygon(50% 0,100% 74%,67% 68%,92% 100%,8% 100%,33% 68%,0 74%);
-}
 .gameBuilding{
  position:absolute;
  transform:translate(-50%,-50%);
@@ -317,13 +299,14 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
  min-width:82px;
 }
 .gameBuilding button{
- width:62px;height:62px;border-radius:15px;
- border:2px solid rgba(238,247,242,.82);
- background:linear-gradient(145deg,rgba(31,48,42,.96),rgba(16,28,24,.96));
- box-shadow:0 8px 22px rgba(0,0,0,.4);
- font-size:27px;
+ width:58px;height:58px;border-radius:50%;
+ border:1px solid rgba(238,247,242,.34);
+ background:rgba(15,28,24,.22);
+ box-shadow:0 5px 18px rgba(0,0,0,.22);
+ font-size:0;
  position:relative;
  overflow:hidden;
+ backdrop-filter:blur(1.5px);
 }
 .gameBuilding button:after{
  content:"";
@@ -371,10 +354,6 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 }
 @keyframes walkBob{from{margin-top:0}to{margin-top:-3px}}
 @keyframes workBob{from{transform:translate(-50%,-82%) rotate(-2deg)}to{transform:translate(-50%,-82%) rotate(2deg)}}
-.pathDot{
- position:absolute;width:5px;height:5px;border-radius:50%;
- background:rgba(236,220,174,.55);z-index:4;pointer-events:none;
-}
 .sceneBadge{
  position:absolute;left:10px;top:10px;z-index:18;
  background:rgba(9,18,16,.82);border:1px solid rgba(255,255,255,.12);
@@ -388,7 +367,7 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.14</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.15</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -1008,7 +987,7 @@ function homeBuilding(key,icon,name,x,y,onclick){
  const t=key?homeJobTeam(key):null;
  const p=key?homeJobProgress(key):0;
  return `<div class="gameBuilding ${t?"busy":""}" style="left:${x}%;top:${y}%">
-   <button onclick="${onclick}">${icon}</button>
+   <button aria-label="${name}" onclick="${onclick}"></button>
    <span>${name}${t?` · ${phaseETA(t)}`:""}</span>
    ${t?`<div class="buildProgress"><i style="width:${p}%"></i></div>`:""}
  </div>`;
@@ -1036,7 +1015,7 @@ function home6(){
  return `<div class="hero objective">
    <div class="tiny">VI КОЛЬЦО · VISUAL PROTOTYPE v0.14</div>
    <h1>Домашний остров</h1>
-   <p>Мир теперь разбит на игровые слои: окружение, здания и рабочие существуют отдельно и могут анимироваться независимо.</p>
+   <p>Чистый игровой фон без встроенного интерфейса. Все названия, таймеры и рабочие теперь существуют только как живые игровые слои.</p>
    <div class="ringline"><div class="current">VI</div><div>V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
  </div>
  ${teamChips()}
@@ -1045,8 +1024,6 @@ function home6(){
   <div class="visualHomeMap">
    <div class="seaShimmer"></div>
    <div class="sceneBadge">VI · домашний остров</div>
-   ${decorativeTrees()}
-   ${homePathDots()}
    ${homeBuilding(null,"🏠","База",50,49,"void(0)")}
    ${homeBuilding("wood","🌲","Лесопилка",68,27,"openHomeObject('wood')")}
    ${homeBuilding("farm","🌾","Ферма",25,62,"openHomeObject('farm')")}
