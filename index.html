@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.6</title>
+<title>Centerlands — Prototype v0.8</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -29,7 +29,7 @@ main{padding:13px}.hero{background:linear-gradient(160deg,#1c332b,#182521);borde
 .meta{margin-top:8px;font-size:11px;color:#b8cbc4;line-height:1.45}.objective{border-left:3px solid var(--warn)}
 button{border:0;border-radius:11px;padding:9px 11px;font-weight:800;background:var(--accent);color:#102019;cursor:pointer}
 button.secondary{background:#263831;color:#e8f3ee;border:1px solid #3d524a}button.ghost{background:transparent;color:#bed1c9;border:1px solid var(--line)}
-button.warn{background:var(--warn);color:#282014}button.danger{background:var(--danger);color:#2a1111}button:disabled{opacity:.38;cursor:not-allowed}
+button.warn{background:var(--warn);color:#282014}button.danger{background:var(--danger);color:#2a1111}button:disabled{opacity:.32;cursor:not-allowed;filter:saturate(.35)}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .teamSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 12px}.teamChip{background:#121c19;border:1px solid var(--line);border-radius:12px;padding:8px;min-height:62px}.teamChip b{font-size:11px;display:block}.teamChip span{display:block;font-size:10px;color:var(--muted);margin-top:4px;line-height:1.25}.teamChip.idle{border-color:#426052}.teamChip.busy{border-color:#6d613e}
 .teamRow{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding:10px 0;font-size:12px}.teamRow:first-of-type{border-top:0}.teamDetail{color:var(--muted);font-size:10.5px;margin-top:3px;line-height:1.35}
@@ -86,13 +86,38 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 .moveTag{position:absolute;transform:translate(-50%,-50%);z-index:4;background:#dcece5;color:#13211d;padding:3px 6px;border-radius:999px;font-size:8.5px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.22)}
 .legend{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0}.legend span{font-size:9.5px;background:#111b18;border:1px solid var(--line);padding:5px 7px;border-radius:999px;color:#bfd0ca}
 .toast{position:fixed;left:50%;bottom:91px;transform:translateX(-50%) translateY(20px);opacity:0;background:#edf7f2;color:#122019;padding:9px 12px;border-radius:11px;font-weight:800;font-size:12px;transition:.2s;z-index:60;box-shadow:0 8px 30px rgba(0,0,0,.35);white-space:nowrap}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.hidden{display:none!important}
+
+.homeMap{
+ position:relative;
+ height:430px;
+ border:1px solid #31505a;
+ border-radius:21px;
+ overflow:hidden;
+ margin-bottom:11px;
+ background:
+   radial-gradient(circle at 50% 48%,#29493d 0 17%,transparent 18%),
+   radial-gradient(circle at 28% 25%,#203f35 0 8%,transparent 9%),
+   radial-gradient(circle at 77% 27%,#23453a 0 8%,transparent 9%),
+   radial-gradient(circle at 23% 75%,#29493d 0 8%,transparent 9%),
+   radial-gradient(circle at 77% 75%,#203f35 0 8%,transparent 9%),
+   linear-gradient(160deg,#17363e,#10292e);
+}
+.homeMap:after{
+ content:"";
+ position:absolute;inset:0;
+ background-image:radial-gradient(rgba(255,255,255,.10) 1px,transparent 1px);
+ background-size:20px 20px;
+ opacity:.12;
+ pointer-events:none;
+}
+
 </style>
 </head>
 <body>
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.6</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.8</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -119,6 +144,7 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
 <script>
 const $=s=>document.querySelector(s), now=()=>Date.now(), fmt=n=>Math.max(0,Math.floor(n));
 let activeTab="home";
+let mapScroll={left:null,top:null};
 
 const HOME_JOBS={
  wood:{title:"Лесопилка",icon:"🌲",out:3,work:8,back:3,reward:{wood:12},rewardText:"+12 дерева"},
@@ -214,6 +240,51 @@ function advanceHomeJob(t,key){
  else if(t.phase==="back"&&ts>=t.phaseEnd){gain(t.reward);const txt=t.rewardText;resetTeam(t);log(`${t.name} вернулась. ${txt}.`)}
 }
 function resetTeam(t){t.phase="idle";t.target=null;t.phaseEnd=0;t.missionEnd=0;t.reward=null;t.rewardText="";t.special=null;t.objectId=null}
+
+
+function openHomeObject(key){
+ const j=HOME_JOBS[key],t=freeTeam();
+ openModal(`<h2>${j.icon} ${j.title}</h2>
+ <p>Безопасный объект VI кольца. Здесь никто не может оспорить вашу команду.</p>
+ <div class="timeline">
+  <div><span>Путь туда</span><b>${j.out} сек</b></div>
+  <div><span>Работа</span><b>${j.work} сек</b></div>
+  <div><span>Путь обратно</span><b>${j.back} сек</b></div>
+  <div><span>Результат</span><b>${j.rewardText}</b></div>
+ </div>
+ <div class="actions">
+  <button onclick="startHomeJob('${key}');closeModal()" ${!t?"disabled":""}>${t?`Отправить ${t.name}`:"Нет свободной команды"}</button>
+  <button class="ghost" onclick="closeModal()">Закрыть</button>
+ </div>`);
+}
+function openHomeWorkshop(){
+ openModal(`<h2>🧵 Ткацкая мастерская</h2>
+ <p>Перерабатывает волокно в ткань.</p>
+ <div class="timeline">
+  <div><span>Нужно</span><b>8 волокна</b></div>
+  <div><span>Получите</span><b>8 ткани</b></div>
+ </div>
+ <div class="actions">
+  <button onclick="makeCloth();closeModal()" ${(freeTeams().length===0||S.resources.fiber<8)?"disabled":""}>Сделать</button>
+  <button class="ghost" onclick="closeModal()">Закрыть</button>
+ </div>`);
+}
+function openHomeDock(){
+ const ready=S.boat;
+ openModal(`<h2>⚓ Причал</h2>
+ <p>${ready?"Шлюпка готова. Можно двигаться к V кольцу.":"Здесь строится первое судно для выхода из безопасной зоны."}</p>
+ <div class="timeline">
+  <div><span>Дерево</span><b>${fmt(S.resources.wood)}/36</b></div>
+  <div><span>Еда</span><b>${fmt(S.resources.food)}/26</b></div>
+  <div><span>Камень</span><b>${fmt(S.resources.stone)}/16</b></div>
+  <div><span>Ткань</span><b>${fmt(S.resources.cloth)}/8</b></div>
+ </div>
+ <div class="actions">
+  ${ready?(S.reached5?`<button onclick="travelRing(5);closeModal()">Вернуться на V</button>`:`<button onclick="sailFirst();closeModal()">Отправиться на V</button>`):
+  `<button onclick="buildBoat();closeModal()" ${(freeTeams().length===0||!costOK(boatCost))?"disabled":""}>Построить шлюпку</button>`}
+  <button class="ghost" onclick="closeModal()">Закрыть</button>
+ </div>`);
+}
 
 function makeCloth(){
  if(S.resources.fiber<8){toast("Нужно 8 волокна");return}
@@ -395,13 +466,30 @@ function processTeam(t){
 }
 
 function home6(){
- return `<div class="hero objective"><div class="tiny">VI КОЛЬЦО · БЕЗОПАСНАЯ ЗОНА</div><h1>Домашний остров</h1><p>Здесь никто не может оспаривать ваши объекты. Это стартовая база и источник базовых ресурсов.</p><div class="ringline"><div class="${S.ring===6?"current":"done"}">VI</div><div class="${S.ring===5?"current":""}">V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div></div>
+ return `<div class="hero objective">
+   <div class="tiny">VI КОЛЬЦО · БЕЗОПАСНАЯ ЗОНА</div>
+   <h1>Домашний остров</h1>
+   <p>Здесь вы учитесь управлять командами. Все объекты безопасны, а цель — подготовить первую шлюпку и выйти к V кольцу.</p>
+   <div class="ringline"><div class="current">VI</div><div>V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
+ </div>
  ${teamChips()}
- <div class="section-title">Безопасная добыча</div>
- ${Object.entries(HOME_JOBS).map(([k,j])=>`<div class="card"><div class="row space"><div><h3>${j.icon} ${j.title}</h3><p>${j.rewardText}</p></div><button onclick="startHomeJob('${k}')">Отправить</button></div><div class="meta">${j.out} сек туда · ${j.work} сек работа · ${j.back} сек обратно</div></div>`).join("")}
- <div class="card"><div class="row space"><div><h3>🧵 Ткацкая мастерская</h3><p>8 волокна → 8 ткани</p></div><button onclick="makeCloth()">Сделать</button></div></div>
- <div class="card objective"><h3>${S.boat?"✅ Шлюпка готова":"⛵ Первая шлюпка"}</h3><p>🌲36 · 🌾26 · 🪨16 · 🧵8</p><div class="actions">${S.boat?(S.reached5?`<button onclick="travelRing(5)">Вернуться на V</button>`:`<button onclick="sailFirst()">Отправиться на V</button>`):`<button onclick="buildBoat()">Построить</button>`}</div></div>`;
+ <div class="homeMap">
+   <div class="place base" style="left:50%;top:50%"><button>🏠</button><span>Ваша база</span></div>
+   <div class="place free" style="left:24%;top:23%"><button onclick="openHomeObject('wood')">🌲</button><span>Лесопилка</span></div>
+   <div class="place free" style="left:77%;top:24%"><button onclick="openHomeObject('farm')">🌾</button><span>Ферма</span></div>
+   <div class="place free" style="left:22%;top:76%"><button onclick="openHomeObject('stone')">🪨</button><span>Карьер</span></div>
+   <div class="place free" style="left:76%;top:73%"><button onclick="openHomeWorkshop()">🧵</button><span>Ткацкая мастерская</span></div>
+   <div class="place free" style="left:50%;top:88%"><button onclick="openHomeDock()">⚓</button><span>Причал</span></div>
+ </div>
+ <div class="card objective">
+   <h3>${S.boat?"✅ Шлюпка готова":"Следующая цель: построить шлюпку"}</h3>
+   <p>${S.boat?(S.reached5?"Вы уже открыли V кольцо.":"Можно отправляться к V кольцу."):"Собирайте ресурсы на карте и используйте ткацкую мастерскую."}</p>
+   <div class="actions">
+    ${S.boat?(S.reached5?`<button onclick="travelRing(5)">Вернуться на V</button>`:`<button onclick="sailFirst()">Отправиться на V</button>`):""}
+   </div>
+ </div>`;
 }
+
 function objectClass(o){
  if(o.contest)return"contest";
  if(o.owner==="player")return"owned";
@@ -428,7 +516,7 @@ function map5(){
  <div class="ringline"><div class="done">VI</div><div class="current">V</div><div>IV</div><div>III</div><div>II</div><div>I</div><div>★</div></div>
  <div class="legend"><span>🟢 ваша смена</span><span>🟤 другой игрок</span><span>🔴 спор</span><span>⭐ богатый объект</span></div></div>
  ${teamChips()}
- ${!S.outpost?`<div class="card objective"><h3>Сначала основать форпост</h3><p>Форпост — безопасная база этого кольца.</p><div class="actions"><button onclick="foundOutpost()">Основать</button></div></div>`:""}
+ ${!S.outpost?`<div class="card objective"><h3>Сначала основать форпост</h3><p>Форпост — безопасная база этого кольца.</p><div class="actions"><button onclick="foundOutpost()" ${freeTeams().length===0?"disabled":""}>Основать</button></div></div>`:""}
  <div class="mapHint">Перемещение по карте: зажмите пустое место и тяните мышкой. На телефоне — двигайте пальцем.</div>
  <div class="mapWrap"><div class="map">
    <div class="place base" style="left:50%;top:53%"><button>🏕️</button><span>${S.outpost?"Ваш форпост":"точка высадки"}</span></div>
@@ -438,7 +526,9 @@ function map5(){
    <div class="place free" style="left:78%;top:91%"><button>＋</button><span>свободная высадка</span></div>
    ${Object.values(S.objects).map(o=>`<div class="place ${objectClass(o)} ${o.rich?"rich":""}" style="left:${o.x}%;top:${o.y}%"><button onclick="openObject('${o.id}')">${o.icon}</button><span>${o.rich?"⭐ ":""}${o.name} · ${objectStatusLabel(o)}</span></div>${botMarker(o)}${playerMarker(o)}`).join("")}
  </div></div>
- <div class="card objective"><h3>${S.ship2?"✅ Корабль II класса готов":"⛵ Цель V кольца: корабль II класса"}</h3><p>${S.ship2?"Вы готовы к следующему кольцу.":"Для него нужны ресурсы этого кольца. Занятая верфь сокращает время строительства вдвое."}</p><div class="meta">🌲 ${fmt(S.resources.wood)}/${c.wood} · 🌾 ${fmt(S.resources.food)}/${c.food} · ⛓ ${fmt(S.resources.iron)}/${c.iron} · 🧵 ${fmt(S.resources.cloth)}/${c.cloth}</div><div class="actions">${S.ship2?`<button disabled>IV — следующий этап</button>`:`<button onclick="buildShip2()">Построить</button>${S.resources.cloth<c.cloth?`<button class="secondary" onclick="travelRing(6)">Вернуться за тканью</button>`:""}`}</div></div>`;
+ <div class="card objective"><h3>${S.ship2?"✅ Корабль II класса готов":"⛵ Цель V кольца: корабль II класса"}</h3><p>${S.ship2?"Вы готовы к следующему кольцу.":"Для него нужны ресурсы этого кольца. Занятая верфь сокращает время строительства вдвое."}</p><div class="meta">🌲 ${fmt(S.resources.wood)}/${c.wood} · 🌾 ${fmt(S.resources.food)}/${c.food} · ⛓ ${fmt(S.resources.iron)}/${c.iron} · 🧵 ${fmt(S.resources.cloth)}/${c.cloth}</div>
+    <div class="meta">${!costOK(c)?"Сначала соберите все ресурсы.":freeTeams().length===0?"Нужна свободная команда для строительства.":"Все условия выполнены."}</div>
+    <div class="actions">${S.ship2?`<button disabled>IV — следующий этап</button>`:`<button onclick="buildShip2()" ${(freeTeams().length===0||!costOK(ship2Cost))?"disabled":""}>Построить</button>${S.resources.cloth<c.cloth?`<button class="secondary" onclick="travelRing(6)">Вернуться за тканью</button>`:""}`}</div></div>`;
 }
 function renderHome(){$("#homeScreen").innerHTML=S.ring===6?home6():map5()}
 function renderTeams(){
@@ -456,18 +546,26 @@ function enableMapPan(){
  if(!wrap || wrap.dataset.panReady==="1") return;
  wrap.dataset.panReady="1";
 
- // Start near the player's outpost instead of top-left.
- if(!wrap.dataset.centered){
-   wrap.scrollLeft=Math.max(0,(720-wrap.clientWidth)/2);
-   wrap.scrollTop=Math.max(0,(620-wrap.clientHeight)/2);
-   wrap.dataset.centered="1";
- }
+ requestAnimationFrame(()=>{
+   if(mapScroll.left===null || mapScroll.top===null){
+     wrap.scrollLeft=Math.max(0,(720-wrap.clientWidth)/2);
+     wrap.scrollTop=Math.max(0,(620-wrap.clientHeight)/2);
+     mapScroll.left=wrap.scrollLeft;
+     mapScroll.top=wrap.scrollTop;
+   }else{
+     wrap.scrollLeft=mapScroll.left;
+     wrap.scrollTop=mapScroll.top;
+   }
+ });
 
- let dragging=false,startX=0,startY=0,startLeft=0,startTop=0,moved=false;
+ let dragging=false,startX=0,startY=0,startLeft=0,startTop=0;
+ const remember=()=>{mapScroll.left=wrap.scrollLeft;mapScroll.top=wrap.scrollTop;};
+
+ wrap.addEventListener("scroll",remember,{passive:true});
 
  wrap.addEventListener("pointerdown",e=>{
    if(e.target.closest("button")) return;
-   dragging=true;moved=false;
+   dragging=true;
    startX=e.clientX;startY=e.clientY;
    startLeft=wrap.scrollLeft;startTop=wrap.scrollTop;
    wrap.classList.add("dragging");
@@ -476,28 +574,27 @@ function enableMapPan(){
 
  wrap.addEventListener("pointermove",e=>{
    if(!dragging) return;
-   const dx=e.clientX-startX,dy=e.clientY-startY;
-   if(Math.abs(dx)>3||Math.abs(dy)>3)moved=true;
-   wrap.scrollLeft=startLeft-dx;
-   wrap.scrollTop=startTop-dy;
+   wrap.scrollLeft=startLeft-(e.clientX-startX);
+   wrap.scrollTop=startTop-(e.clientY-startY);
+   remember();
    e.preventDefault();
  });
 
  const stop=e=>{
    if(!dragging)return;
    dragging=false;
+   remember();
    wrap.classList.remove("dragging");
    try{wrap.releasePointerCapture(e.pointerId)}catch(_){}
  };
  wrap.addEventListener("pointerup",stop);
  wrap.addEventListener("pointercancel",stop);
- wrap.addEventListener("pointerleave",e=>{ if(e.buttons===0) stop(e); });
+ wrap.addEventListener("pointerleave",e=>{if(e.buttons===0)stop(e)});
 
- // Trackpad/mouse wheel: vertical wheel pans vertically;
- // Shift+wheel or horizontal trackpad movement pans horizontally.
  wrap.addEventListener("wheel",e=>{
    if(Math.abs(e.deltaX)>0 || e.shiftKey){
      wrap.scrollLeft += e.shiftKey ? e.deltaY : e.deltaX;
+     remember();
      if(e.shiftKey)e.preventDefault();
    }
  },{passive:false});
