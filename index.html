@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Centerlands"/>
 <link rel="manifest" href="manifest.json"/>
-<title>Centerlands — Prototype v0.9</title>
+<title>Centerlands — Prototype v0.10</title>
 <style>
 :root{
  --bg:#0c1412;--panel:#17211f;--panel2:#1d2a27;--text:#eef6f2;--muted:#9fb3ac;
@@ -111,13 +111,14 @@ nav button{padding:8px 4px;background:transparent;color:var(--muted);font-size:1
  pointer-events:none;
 }
 
+.homeMoveTag{z-index:12;pointer-events:none;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.35)}
 </style>
 </head>
 <body>
 <div id="app">
 <header>
  <div class="row space">
-   <div><div class="title">CENTERLANDS <span class="tiny">v0.9</span></div><div class="tiny" id="where"></div></div>
+   <div><div class="title">CENTERLANDS <span class="tiny">v0.10</span></div><div class="tiny" id="where"></div></div>
    <div class="pill" id="teamCount"></div>
  </div>
  <div class="resources" id="resources"></div>
@@ -216,8 +217,11 @@ function resourceHTML(){
  return [["🌲","Дерево",r.wood],["🌾","Еда",r.food],["🪨","Камень",r.stone],["🧵","Ткань",r.cloth],["⛓","Железо",r.iron],["🌿","Волокно",r.fiber]]
    .map(x=>`<div class="res">${x[0]} ${x[1]}<b>${fmt(x[2])}</b></div>`).join("");
 }
+function teamChipContent(){
+ return S.teams.map(t=>`<div class="teamChip ${t.phase==="idle"?"idle":"busy"}"><b>${t.name}</b><span>${phaseName(t)}</span>${t.phase!=="idle"?`<span>этап ${phaseETA(t)} · домой ${teamETA(t)}</span>`:`<span class="ok">готова</span>`}</div>`).join("");
+}
 function teamChips(){
- return `<div class="teamSummary">${S.teams.map(t=>`<div class="teamChip ${t.phase==="idle"?"idle":"busy"}"><b>${t.name}</b><span>${phaseName(t)}</span>${t.phase!=="idle"?`<span>этап ${phaseETA(t)} · домой ${teamETA(t)}</span>`:`<span class="ok">готова</span>`}</div>`).join("")}</div>`;
+ return `<div class="teamSummary" id="homeTeamSummary">${teamChipContent()}</div>`;
 }
 function openModal(x){$("#modal").innerHTML=x;$("#modalBack").classList.add("show")}
 function closeModal(){$("#modalBack").classList.remove("show")}
@@ -466,6 +470,40 @@ function processTeam(t){
  if(t.special==="object"){tickPlayerObjectTeam(t);return}
 }
 
+
+const HOME_POS={
+ wood:{x:24,y:23},
+ farm:{x:77,y:24},
+ stone:{x:22,y:76}
+};
+function homeTeamMarker(t){
+ if(!t.special || !t.special.startsWith("home:")) return "";
+ const key=t.special.split(":")[1],j=HOME_JOBS[key],p=HOME_POS[key];
+ if(!j||!p) return "";
+ const bx=50,by=50,ts=now();
+ let x=p.x,y=p.y,label="";
+ if(t.phase==="out"){
+   const rem=Math.max(0,(t.phaseEnd-ts)/1000);
+   const progress=Math.max(0,Math.min(1,1-rem/j.out));
+   x=bx+(p.x-bx)*progress;
+   y=by+(p.y-by)*progress;
+   label=`${t.name} → ${mmss(rem)}`;
+ }else if(t.phase==="work"){
+   x=p.x;y=p.y;
+   label=`${t.name} · работа ${phaseETA(t)}`;
+ }else if(t.phase==="back"){
+   const rem=Math.max(0,(t.phaseEnd-ts)/1000);
+   const progress=Math.max(0,Math.min(1,1-rem/j.back));
+   x=p.x+(bx-p.x)*progress;
+   y=p.y+(by-p.y)*progress;
+   label=`${t.name} ← ${mmss(rem)}`;
+ }else return "";
+ return `<div class="moveTag homeMoveTag" style="left:${x}%;top:${y}%">${label}</div>`;
+}
+function homeTeamMarkers(){
+ return S.teams.map(homeTeamMarker).join("");
+}
+
 function home6(){
  return `<div class="hero objective">
    <div class="tiny">VI КОЛЬЦО · БЕЗОПАСНАЯ ЗОНА</div>
@@ -481,6 +519,7 @@ function home6(){
    <div class="place free" style="left:22%;top:76%"><button onclick="openHomeObject('stone')">🪨</button><span>Карьер</span></div>
    <div class="place free" style="left:76%;top:73%"><button onclick="openHomeWorkshop()">🧵</button><span>Ткацкая мастерская</span></div>
    <div class="place free" style="left:50%;top:88%"><button onclick="openHomeDock()">⚓</button><span>Причал</span></div>
+   ${homeTeamMarkers()}
  </div>
  <div class="card objective">
    <h3>${S.boat?"✅ Шлюпка готова":"Следующая цель: построить шлюпку"}</h3>
@@ -525,7 +564,8 @@ function map5(){
    <div class="place other" style="left:93%;top:54%"><button>🏕️</button><span>Mila</span></div>
    <div class="place other" style="left:33%;top:92%"><button>🏕️</button><span>Noah</span></div>
    <div class="place free" style="left:78%;top:91%"><button>＋</button><span>свободная высадка</span></div>
-   ${Object.values(S.objects).map(o=>`<div class="place ${objectClass(o)} ${o.rich?"rich":""}" style="left:${o.x}%;top:${o.y}%"><button onclick="openObject('${o.id}')">${o.icon}</button><span>${o.rich?"⭐ ":""}${o.name} · ${objectStatusLabel(o)}</span></div>${botMarker(o)}${playerMarker(o)}`).join("")}
+   ${Object.values(S.objects).map(o=>`<div class="place ${objectClass(o)} ${o.rich?"rich":""}" data-object-id="${o.id}" style="left:${o.x}%;top:${o.y}%"><button onclick="openObject('${o.id}')">${o.icon}</button><span data-object-label="${o.id}">${o.rich?"⭐ ":""}${o.name} · ${objectStatusLabel(o)}</span></div>`).join("")}
+   <div id="map5MarkerLayer">${Object.values(S.objects).map(o=>`${botMarker(o)}${playerMarker(o)}`).join("")}</div>
  </div></div>
  <div class="card objective"><h3>${S.ship2?"✅ Корабль II класса готов":"⛵ Цель V кольца: корабль II класса"}</h3><p>${S.ship2?"Вы готовы к следующему кольцу.":"Для него нужны ресурсы этого кольца. Занятая верфь сокращает время строительства вдвое."}</p><div class="meta">🌲 ${fmt(S.resources.wood)}/${c.wood} · 🌾 ${fmt(S.resources.food)}/${c.food} · ⛓ ${fmt(S.resources.iron)}/${c.iron} · 🧵 ${fmt(S.resources.cloth)}/${c.cloth}</div>
     <div class="meta">${!costOK(c)?"Сначала соберите все ресурсы.":freeTeams().length===0?"Нужна свободная команда для строительства.":"Все условия выполнены."}</div>
@@ -609,6 +649,40 @@ function enableMapPan(){
  },{passive:false});
 }
 
+
+function refreshTopUI(){
+ $("#resources").innerHTML=resourceHTML();
+ $("#where").textContent=S.ring===6?"VI кольцо · домашний остров":"V кольцо · сектор 12";
+ $("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
+ const summary=document.getElementById("homeTeamSummary");
+ if(summary) summary.innerHTML=teamChipContent();
+}
+function refreshMap5Dynamic(){
+ if(S.ring!==5 || activeTab!=="home") return;
+ Object.values(S.objects).forEach(o=>{
+   const el=document.querySelector(`[data-object-id="${o.id}"]`);
+   if(el){
+     el.className=`place ${objectClass(o)} ${o.rich?"rich":""}`;
+   }
+   const label=document.querySelector(`[data-object-label="${o.id}"]`);
+   if(label){
+     label.textContent=`${o.rich?"⭐ ":""}${o.name} · ${objectStatusLabel(o)}`;
+   }
+ });
+ const layer=document.getElementById("map5MarkerLayer");
+ if(layer){
+   layer.innerHTML=Object.values(S.objects).map(o=>`${botMarker(o)}${playerMarker(o)}`).join("");
+ }
+}
+function periodicUI(){
+ refreshTopUI();
+ if(S.ring===5 && activeTab==="home"){
+   refreshMap5Dynamic();
+ }else if(!mapInteracting){
+   render();
+ }
+}
+
 function render(){
  $("#resources").innerHTML=resourceHTML();$("#where").textContent=S.ring===6?"VI кольцо · домашний остров":"V кольцо · сектор 12";$("#teamCount").textContent=`👥 ${freeTeams().length}/${S.teams.length}`;
  ["home","teams","store","world"].forEach(k=>{$("#"+k+"Screen").classList.toggle("hidden",activeTab!==k);document.querySelector(`[data-tab="${k}"]`).classList.toggle("active",activeTab===k)});
@@ -618,7 +692,7 @@ function resetGame(){localStorage.removeItem("centerlands_v05");S=fresh();active
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{activeTab=b.dataset.tab;render()}));
 
 setInterval(()=>{S.teams.forEach(processTeam);tickBots();},250);
-setInterval(()=>{save();if(!mapInteracting)render()},1000);
+setInterval(()=>{save();periodicUI()},1000);
 render();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));

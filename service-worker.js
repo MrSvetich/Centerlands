@@ -1,4 +1,4 @@
-const CACHE='centerlands-v09';
+const CACHE='centerlands-v010';
 const ASSETS=['./','./index.html','./manifest.json'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
